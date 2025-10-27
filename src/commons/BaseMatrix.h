@@ -15,6 +15,10 @@ public:
     /*contains int to amino acid mapping*/
     char* num2aa;
 
+    /* remove non-canonical nucleotides */
+    unsigned char* revcomp;
+    unsigned char* tail;
+
     /* size of alphabet*/
     int alphabetSize;
 
@@ -60,6 +64,8 @@ public:
     virtual double getBackgroundProb(size_t aa_index);
 
     virtual void setupLetterMapping() {};
+
+    virtual void setupDinucleotideLetterMapping() {};
 
     virtual float getBitFactor() {return 1.0; }
 

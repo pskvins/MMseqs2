@@ -276,7 +276,7 @@ s_align SmithWaterman::ssw_align_private (
 
 	// run very shot and long overflowing alignments with SW instead of block aligner
 	// short alignments are very fast with byte SW, long alignments produce slightly different scores FIXME
-	if (align.word != 1) {
+	if (true || align.word != 1) {
 		return alignStartPosBacktrace<type>(db_sequence, db_length, gap_open, gap_extend, alignmentMode, backtrace, align, evaluer, covMode, covThr, correlationScoreWeight, maskLen);
 	}
 

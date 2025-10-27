@@ -304,23 +304,60 @@ void Sequence::nextProfileKmer() {
     }
 }
 
-void Sequence::mapSequence(const char * sequence, unsigned int dataLen){
+void Sequence::mapSequence(const char* __restrict sequence, unsigned int dataLen) {
     if(dataLen >= maxLen){
         numSequence = static_cast<unsigned char*>(realloc(numSequence, dataLen+1));
         maxLen = dataLen;
     }
-    const unsigned char* lookup = subMat->aa2num;  // local pointer for speed
+
+    const unsigned char* aa2num = subMat->aa2num;  // local pointer for speed
+
+    // Process all but last; last uses 'C' as your sentinel partner.
+    unsigned i = 0;
+    const unsigned char* __restrict p = (const unsigned char*)sequence;
+
+    unsigned int s_1, s_2, s_3, s_4, s_5;
+    s_1 = static_cast<unsigned int>(p[0]);
+    for (; i + 4 < dataLen; i += 4) {
+        s_2 = static_cast<unsigned int>(p[i + 1]);
+        s_3 = static_cast<unsigned int>(p[i + 2]);
+        s_4 = static_cast<unsigned int>(p[i + 3]);
+        s_5 = static_cast<unsigned int>(p[i + 4]);
+        numSequence[i] = aa2num[(s_1 << 8) | s_2];
+        numSequence[i + 1] = aa2num[(s_2 << 8) | s_3];
+        numSequence[i + 2] = aa2num[(s_3 << 8) | s_4];
+        numSequence[i + 3] = aa2num[(s_4 << 8) | s_5];
+        s_1 = s_5;
+    }
+    for (; i < dataLen - 1; i++) {
+        s_2 = static_cast<unsigned int>(p[i + 1]);
+        numSequence[i] = aa2num[(s_1 << 8) | s_2];
+        s_1 = s_2;
+    }
+    // Last char, just append C (arbitrary)
+    unsigned int idx = (s_1 << 8) | static_cast<unsigned int>('C');
+    numSequence[i] = aa2num[idx];
+
+    this->L = i+1;
+}
+
+// Get the reverse complements
+void Sequence::reverseComplement() {
+    std::reverse(numSequence, numSequence + this->L - 1); // reverse sequence except the last
+    const unsigned char* __restrict complement = subMat->revcomp;
     unsigned int i = 0;
-    for (; i + 4 <= dataLen; i += 4) {
-        numSequence[i]   = lookup[(unsigned char)sequence[i]];
-        numSequence[i+1] = lookup[(unsigned char)sequence[i+1]];
-        numSequence[i+2] = lookup[(unsigned char)sequence[i+2]];
-        numSequence[i+3] = lookup[(unsigned char)sequence[i+3]];
+    unsigned int dataLen = this->L;
+    for (; i + 4 < dataLen - 1; i += 4) { // except the last character
+        numSequence[i]     = complement[numSequence[i]];
+        numSequence[i + 1] = complement[numSequence[i + 1]];
+        numSequence[i + 2] = complement[numSequence[i + 2]];
+        numSequence[i + 3] = complement[numSequence[i + 3]];
     }
-    for (; i < dataLen; i++) {
-        numSequence[i]   = lookup[(unsigned char)sequence[i]];
+    for (; i < dataLen - 1; i++) {
+        numSequence[i] = complement[numSequence[i]];
     }
-    this->L = i;
+    // Deal with the last character
+    numSequence[i] = subMat->tail[numSequence[i - 1]];
 }
 
 void Sequence::printPSSM(){

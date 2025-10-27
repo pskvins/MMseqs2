@@ -42,6 +42,8 @@ public:
 
     void setupLetterMapping();
 
+    void setupDinucleotideLetterMapping();
+
     struct FastMatrix{
         const char ** matrix;
         const char * matrixData;

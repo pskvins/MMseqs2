@@ -7,6 +7,7 @@ set(GENERATED_MATRICES
         VTML80.out
         VTML40.out
         nucleotide.out
+	dinuc.out
         blosum62.out
         PAM30.out
         )

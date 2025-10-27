@@ -394,6 +394,39 @@ void Alignment::run(const std::string &outDB, const std::string &outDBIndex, con
                     } else {
                         rejected++;
                     }
+
+                    // Do same for the reverse complement
+                    isReverse = true;
+                    dbSeq.reverseComplement();
+
+                    // check if the sequences could pass the coverage threshold
+                    if (Util::canBeCovered(canCovThr, covMode, static_cast<float>(origQueryLen), static_cast<float>(dbSeq.L)) == false) {
+                        rejected++;
+                        continue;
+                    }
+
+                    const bool isIdentity_rev = (queryDbKey == dbKey && (includeIdentity || sameQTDB)) ? true : false;
+
+                    // calculate Smith-Waterman alignment
+
+                    Matcher::result_t res_rev = matcher.getSWResult(&dbSeq, static_cast<int>(diagonal), isReverse, covMode, covThr, evalThr, swMode, seqIdMode, isIdentity_rev, wrappedScoring);
+                    alignmentsNum++;
+
+                    if (isIdentity_rev) {
+                        // set coverage and seqid of identity
+                        res_rev.qcov = 1.0f;
+                        res_rev.dbcov = 1.0f;
+                        res_rev.seqId = 1.0f;
+                    }
+
+                    if (checkCriteria(res_rev, isIdentity_rev, evalThr, seqIdThr, alnLenThr, covMode, covThr)) {
+                        swResults.emplace_back(res_rev);
+                        passedNum++;
+                        totalPassedNum++;
+                        rejected = 0;
+                    } else {
+                        rejected++;
+                    }
                 }
 
                 if (altAlignment > 0 && realign == false && wrappedScoring == false) {

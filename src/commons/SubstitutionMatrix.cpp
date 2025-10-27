@@ -42,15 +42,16 @@ SubstitutionMatrix::SubstitutionMatrix(const char *filename, float bitFactor, fl
     }
     initMatrixMemory(alphabetSize);
     readProbMatrix(matrixData, alphSizeAndX.second);
-    if(mappingHasAminoAcidLetters()){
-        setupLetterMapping();
-    }else {
-        for (int letter = 0; letter < UCHAR_MAX; letter++) {
-            char upperLetter = toupper(static_cast<char>(letter));
-            aa2num[letter] = (aa2num[static_cast<unsigned char>(upperLetter)] == UCHAR_MAX)
-                             ? alphabetSize-1 : aa2num[static_cast<int>(upperLetter)];
-        }
-    }
+    // if(mappingHasAminoAcidLetters()){
+        // setupLetterMapping();
+    setupDinucleotideLetterMapping();
+    // }else {
+    //     for (int letter = 0; letter < UCHAR_MAX; letter++) {
+    //         char upperLetter = toupper(static_cast<char>(letter));
+    //         aa2num[letter] = (aa2num[static_cast<unsigned char>(upperLetter)] == UCHAR_MAX)
+    //                          ? alphabetSize-1 : aa2num[static_cast<int>(upperLetter)];
+    //     }
+    // }
 
     //print(probMatrix, num2aa, alphabetSize);
     generateSubMatrix(probMatrix, subMatrixPseudoCounts, subMatrix, alphabetSize, true, bitFactor, scoreBias);
@@ -81,7 +82,7 @@ void SubstitutionMatrix::calcLocalAaBiasCorrection(const BaseMatrix *m,
                                                    const int N,
                                                    float *compositionBias,
                                                    float scale) {
-    const int windowSize = 40;
+    const int windowSize = 50;
     for (int i = 0; i < N; i++) {
         const int minPos = std::max(0, (i - windowSize / 2));
         const int maxPos = std::min(N, (i + windowSize / 2));
@@ -113,7 +114,7 @@ void SubstitutionMatrix::calcProfileProfileLocalAaBiasCorrection(short *profileS
                                                                  const size_t profileAASize,
                                                                  const int N, size_t alphabetSize) {
 
-    const int windowSize = 40;
+    const int windowSize = 50;
 
     float * pnul  = new float[alphabetSize];
     float * aaSum = new float[alphabetSize];
@@ -155,7 +156,7 @@ void SubstitutionMatrix::calcProfileProfileLocalAaBiasCorrection(short *profileS
 void SubstitutionMatrix::calcProfileProfileLocalAaBiasCorrectionAln(int8_t *profileScores,
                                                                     unsigned int N, size_t alphabetSize, BaseMatrix *subMat) {
 
-    const int windowSize = 40;
+    const int windowSize = 50;
 
     float * pnul = new float[N]; // expected score of the prof ag. a random (blosum bg dist) seq
     memset(pnul, 0, sizeof(float) * N);
@@ -208,7 +209,7 @@ void SubstitutionMatrix::calcGlobalAaBiasCorrection(const BaseMatrix *m,
                                                     const size_t profileAASize,
                                                     const int N) {
     memset(pNullBuffer, 0, sizeof(float) * N);
-    const int windowSize = 40;
+    const int windowSize = 50;
     for (int pos = 0; pos < N; pos++) {
         const char * subMat = profileScores + (pos * profileAASize);
         for(size_t aa = 0; aa < 20; aa++) {
@@ -296,6 +297,149 @@ void SubstitutionMatrix::setupLetterMapping(){
         }
     }
 }
+
+void SubstitutionMatrix::setupDinucleotideLetterMapping(){
+    // Map dinucleotides
+    for (int i = 1; i < UCHAR_MAX; i++) { // Never map 0
+        unsigned short upperLetter1 = (static_cast<unsigned short>(toupper(static_cast<unsigned char>(i))) << 8);
+        unsigned short first = (static_cast<unsigned short>(i) << 8);
+        for (int j = 0; j < UCHAR_MAX; j++) {
+            unsigned short dinucleotide = first | static_cast<unsigned char>(j);
+            unsigned char upperLetter2 = toupper(static_cast<unsigned char>(j));
+            /* Map dinuc2alph = {'AA': 'C', 'AC': 'G', 'AG': 'L', 'AU': 'Q',
+                                'CA': 'D', 'CC': 'F', 'CG': 'R', 'CU': 'K',
+                                'GA': 'M', 'GC': 'A', 'GG': 'P', 'GU': 'I',
+                                'UA': 'E', 'UC': 'N', 'UG': 'H', 'UU': 'S'} */
+            unsigned short upperLetters = upperLetter1 | upperLetter2;
+            switch(upperLetters){
+                case 0b0100000101000001: // AA
+                    this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'C'];
+                    break;
+                case 0b0100000101000011: // AC
+                    this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'G'];
+                    break;
+                case 0b0100000101000111: // AG
+                    this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'L'];
+                    break;
+                case 0b0100000101010100: // AT
+                    this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'Q'];
+                    break;
+                case 0b0100000101010101: // AU
+                    this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'Q'];
+                    break;
+                case 0b0100001101000001: // CA
+                    this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'D'];
+                    break;
+                case 0b0100001101000011: // CC
+                    this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'F'];
+                    break;
+                case 0b0100001101000111: // CG
+                    this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'R'];
+                    break;
+                case 0b0100001101010100: // CT
+                    this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'K'];
+                    break;
+                case 0b0100001101010101: // CU
+                    this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'K'];
+                    break;
+                case 0b0100011101000001: // GA
+                    this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'M'];
+                    break;
+                case 0b0100011101000011: // GC
+                    this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'A'];
+                    break;
+                case 0b0100011101000111: // GG
+                    this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'P'];
+                    break;
+                case 0b0100011101010100: // GT
+                    this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'I'];
+                    break;
+                case 0b0100011101010101: // GU
+                    this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'I'];
+                    break;
+                case 0b0101010001000001: // TA
+                    this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'E'];
+                    break;
+                case 0b0101010001000011: // TC
+                    this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'N'];
+                    break;
+                case 0b0101010001000111: // TG
+                    this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'H'];
+                    break;
+                case 0b0101010001010100: // TT
+                    this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'H'];
+                    break;
+                case 0b0101010001010101: // TU
+                    this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'H'];
+                    break;
+                case 0b0101010101000001: // UA
+                    this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'E'];
+                    break;
+                case 0b0101010101000011: // UC
+                    this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'N'];
+                    break;
+                case 0b0101010101000111: // UG
+                    this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'H'];
+                    break;
+                case 0b0101010101010100: // UT
+                    this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'H'];
+                    break;
+                case 0b0101010101010101: // UU
+                    this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'S'];
+                    break; 
+                default:
+                    this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'X'];
+                    break;
+            }
+        }
+    }
+
+    // Set up revcomp
+    /* {'C': 'S', 'G': 'I', 'L': 'K', 'Q': 'Q', 'D': 'H', 
+    'F': 'P', 'R': 'R', 'K': 'L', 'M': 'N', 'A': 'A', 
+    'P': 'F', 'I': 'G', 'E': 'E', 'N': 'M', 'H': 'D', 'S': 'C', 'X': 'X'} */
+    this->revcomp[this->aa2num[(int)'C']] = this->aa2num[(int)'S'];
+    this->revcomp[this->aa2num[(int)'G']] = this->aa2num[(int)'I'];
+    this->revcomp[this->aa2num[(int)'L']] = this->aa2num[(int)'K'];
+    this->revcomp[this->aa2num[(int)'Q']] = this->aa2num[(int)'Q'];
+    this->revcomp[this->aa2num[(int)'D']] = this->aa2num[(int)'H'];
+    this->revcomp[this->aa2num[(int)'F']] = this->aa2num[(int)'P'];
+    this->revcomp[this->aa2num[(int)'R']] = this->aa2num[(int)'R'];
+    this->revcomp[this->aa2num[(int)'K']] = this->aa2num[(int)'L'];
+    this->revcomp[this->aa2num[(int)'M']] = this->aa2num[(int)'N'];
+    this->revcomp[this->aa2num[(int)'A']] = this->aa2num[(int)'A'];
+    this->revcomp[this->aa2num[(int)'P']] = this->aa2num[(int)'F'];
+    this->revcomp[this->aa2num[(int)'I']] = this->aa2num[(int)'G'];
+    this->revcomp[this->aa2num[(int)'E']] = this->aa2num[(int)'E'];
+    this->revcomp[this->aa2num[(int)'N']] = this->aa2num[(int)'M'];
+    this->revcomp[this->aa2num[(int)'H']] = this->aa2num[(int)'D'];
+    this->revcomp[this->aa2num[(int)'S']] = this->aa2num[(int)'C'];
+    this->revcomp[this->aa2num[(int)'X']] = this->aa2num[(int)'X'];
+    
+    // Set up tail
+    /* {'C': 'G', 'G': 'F', 'L': 'A', 'Q': 'N',
+    'D': 'G', 'F': 'F', 'R': 'A', 'K': 'N',
+    'M': 'G', 'A': 'F', 'P': 'A', 'I': 'N',
+    'E': 'G', 'N': 'F', 'H': 'A', 'S': 'N', 'X': 'X'} */
+    this->tail[this->aa2num[(int)'C']] = this->aa2num[(int)'G'];
+    this->tail[this->aa2num[(int)'G']] = this->aa2num[(int)'F'];
+    this->tail[this->aa2num[(int)'L']] = this->aa2num[(int)'A'];
+    this->tail[this->aa2num[(int)'Q']] = this->aa2num[(int)'N'];
+    this->tail[this->aa2num[(int)'D']] = this->aa2num[(int)'G'];
+    this->tail[this->aa2num[(int)'F']] = this->aa2num[(int)'F'];
+    this->tail[this->aa2num[(int)'R']] = this->aa2num[(int)'A'];
+    this->tail[this->aa2num[(int)'K']] = this->aa2num[(int)'N'];
+    this->tail[this->aa2num[(int)'M']] = this->aa2num[(int)'G'];
+    this->tail[this->aa2num[(int)'A']] = this->aa2num[(int)'F'];
+    this->tail[this->aa2num[(int)'P']] = this->aa2num[(int)'A'];
+    this->tail[this->aa2num[(int)'I']] = this->aa2num[(int)'N'];
+    this->tail[this->aa2num[(int)'E']] = this->aa2num[(int)'G'];
+    this->tail[this->aa2num[(int)'N']] = this->aa2num[(int)'F'];
+    this->tail[this->aa2num[(int)'H']] = this->aa2num[(int)'A'];
+    this->tail[this->aa2num[(int)'S']] = this->aa2num[(int)'N'];
+    this->tail[this->aa2num[(int)'X']] = this->aa2num[(int)'X'];
+}
+
 
 int SubstitutionMatrix::parseAlphabet(char *word, char *num2aa, int *aa2num) {
     char *charReader = word;

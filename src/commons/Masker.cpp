@@ -38,6 +38,7 @@ int Masker::maskSequence(Sequence & seq, bool maskTantan, double maskProb,
     if(maskLowerCaseLetter){
         if ((Parameters::isEqualDbtype(seq.getSequenceType(), Parameters::DBTYPE_AMINO_ACIDS) ||
              Parameters::isEqualDbtype(seq.getSequenceType(), Parameters::DBTYPE_NUCLEOTIDES))) {
+                // dangerious for iterative profile search
             const char *charSeq = seq.getSeqData();
             for (int i = 0; i < seq.L; i++) {
                 if (std::islower((unsigned char)charSeq[i])) {

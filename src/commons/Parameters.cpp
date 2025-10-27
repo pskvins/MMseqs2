@@ -16,6 +16,7 @@
 #include "VTML80.out.h"
 #include "VTML40.out.h"
 #include "nucleotide.out.h"
+#include "dinuc.out.h"
 #include "base64/base64.h"
 
 #ifdef __CYGWIN__
@@ -2402,8 +2403,8 @@ void Parameters::setDefaults() {
     restArgv = NULL;
     restArgc = 0;
 
-    scoringMatrixFile =  MultiParam<NuclAA<std::string>>(NuclAA<std::string>("blosum62.out", "nucleotide.out"));
-    seedScoringMatrixFile = MultiParam<NuclAA<std::string>>(NuclAA<std::string>("VTML80.out", "nucleotide.out"));
+    scoringMatrixFile =  MultiParam<NuclAA<std::string>>(NuclAA<std::string>("dinuc.out", "dinuc.out"));
+    seedScoringMatrixFile = MultiParam<NuclAA<std::string>>(NuclAA<std::string>("dinuc.out", "dinuc.out"));
 
     kmerSize =  0;
     targetSearchMode = 0;
@@ -2474,8 +2475,8 @@ void Parameters::setDefaults() {
     seqIdThr = 0.0;
     alnLenThr = 0;
     altAlignment = 0;
-    gapOpen = MultiParam<NuclAA<int>>(NuclAA<int>(11, 5));
-    gapExtend = MultiParam<NuclAA<int>>(NuclAA<int>(1, 2));
+    gapOpen = MultiParam<NuclAA<int>>(NuclAA<int>(23, 23));
+    gapExtend = MultiParam<NuclAA<int>>(NuclAA<int>(1, 1));
 #ifdef GAP_POS_SCORING
     gapPseudoCount = 10;
 #endif
@@ -2784,7 +2785,8 @@ void Parameters::setDefaults() {
     // substituion matrix
     substitutionMatrices = {
             {"nucleotide.out", nucleotide_out, nucleotide_out_len },
-            {"blosum62.out", blosum62_out, blosum62_out_len },
+            {"dinuc.out", dinuc_out, dinuc_out_len },
+            {"dinuc.out", blosum62_out, blosum62_out_len },
             {"VTML80.out", VTML80_out, VTML80_out_len},
             {"VTML40.out", VTML40_out, VTML40_out_len},
             {"PAM30.out", PAM30_out, PAM30_out_len}

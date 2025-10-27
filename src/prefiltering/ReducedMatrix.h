@@ -52,6 +52,103 @@ class ReducedMatrix : public BaseMatrix {
                         }
                 }
         };
+
+        void setupDinucleotideLetterMapping(){
+            // Map dinucleotides
+            for (int i = 1; i < UCHAR_MAX; i++) { // Never map 0
+                unsigned short upperLetter1 = (static_cast<unsigned short>(toupper(static_cast<unsigned char>(i))) << 8);
+                unsigned short first = (static_cast<unsigned short>(i) << 8);
+                for (int j = 0; j < UCHAR_MAX; j++) {
+                    unsigned short dinucleotide = first | static_cast<unsigned char>(j);
+                    unsigned char upperLetter2 = toupper(static_cast<unsigned char>(j));
+                    /* Map dinuc2alph = {'AA': 'C', 'AC': 'G', 'AG': 'L', 'AU': 'Q',
+                                        'CA': 'D', 'CC': 'F', 'CG': 'R', 'CU': 'K',
+                                        'GA': 'M', 'GC': 'A', 'GG': 'P', 'GU': 'I',
+                                        'UA': 'E', 'UC': 'N', 'UG': 'H', 'UU': 'S'} */
+                    unsigned short upperLetters = upperLetter1 | upperLetter2;
+                    switch(upperLetters){
+                        case 0b0100000101000001: // AA
+                            this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'C'];
+                            break;
+                        case 0b0100000101000011: // AC
+                            this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'G'];
+                            break;
+                        case 0b0100000101000111: // AG
+                            this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'L'];
+                            break;
+                        case 0b0100000101010100: // AT
+                            this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'Q'];
+                            break;
+                        case 0b0100000101010101: // AU
+                            this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'Q'];
+                            break;
+                        case 0b0100001101000001: // CA
+                            this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'D'];
+                            break;
+                        case 0b0100001101000011: // CC
+                            this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'F'];
+                            break;
+                        case 0b0100001101000111: // CG
+                            this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'R'];
+                            break;
+                        case 0b0100001101010100: // CT
+                            this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'K'];
+                            break;
+                        case 0b0100001101010101: // CU
+                            this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'K'];
+                            break;
+                        case 0b0100011101000001: // GA
+                            this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'M'];
+                            break;
+                        case 0b0100011101000011: // GC
+                            this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'A'];
+                            break;
+                        case 0b0100011101000111: // GG
+                            this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'P'];
+                            break;
+                        case 0b0100011101010100: // GT
+                            this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'I'];
+                            break;
+                        case 0b0100011101010101: // GU
+                            this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'I'];
+                            break;
+                        case 0b0101010001000001: // TA
+                            this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'E'];
+                            break;
+                        case 0b0101010001000011: // TC
+                            this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'N'];
+                            break;
+                        case 0b0101010001000111: // TG
+                            this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'H'];
+                            break;
+                        case 0b0101010001010100: // TT
+                            this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'H'];
+                            break;
+                        case 0b0101010001010101: // TU
+                            this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'H'];
+                            break;
+                        case 0b0101010101000001: // UA
+                            this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'E'];
+                            break;
+                        case 0b0101010101000011: // UC
+                            this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'N'];
+                            break;
+                        case 0b0101010101000111: // UG
+                            this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'H'];
+                            break;
+                        case 0b0101010101010100: // UT
+                            this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'H'];
+                            break;
+                        case 0b0101010101010101: // UU
+                            this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'S'];
+                            break; 
+                        default:
+                            this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'X'];
+                            break;
+                    }
+                }
+            }
+        };
     private:
 
         /*contains the original matrix before the alphabet reduction*/

@@ -85,6 +85,8 @@ public:
     // map sequence from SequenceLookup
     void mapSequence(size_t id, unsigned int dbKey, std::pair<const unsigned char *, const unsigned int> data);
 
+    void reverseComplement();
+
     // map profile HMM, *data points to start position of Profile
     void mapProfile(const char *profileData, unsigned int seqLen);
 

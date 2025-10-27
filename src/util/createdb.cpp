@@ -810,7 +810,7 @@ int createdb(int argc, const char **argv, const Command& command) {
     if(gpuCompatibleDB){
         dbType = DBReader<unsigned int>::setExtendedDbtype(dbType, Parameters::DBTYPE_EXTENDED_GPU);
     }
-    DBWriter::writeDbtypeFile(seqWriter.getDataFileName(), dbType ,par.compressed);
+    DBWriter::writeDbtypeFile(seqWriter.getDataFileName(), Parameters::DBTYPE_AMINO_ACIDS ,par.compressed); // always write as amino acid db
     DBWriter::writeDbtypeFile(hdrWriter.getDataFileName(), Parameters::DBTYPE_GENERIC_DB, par.compressed);
 
     Debug(Debug::INFO) << "Database type: " << Parameters::getDbTypeName(dbType) << "\n";

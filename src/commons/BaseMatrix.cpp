@@ -13,15 +13,27 @@ BaseMatrix::BaseMatrix(){
     // init [amino acid <-> int] mappings
 
     num2aa = new char[255];
-    aa2num = new unsigned char[UCHAR_MAX];
-    for (int i = 0; i < UCHAR_MAX; ++i) {
+    aa2num = new unsigned char[USHRT_MAX];
+    for (int i = 0; i < USHRT_MAX; ++i) {
         aa2num[i] = UCHAR_MAX;
+    }
+    // Reverse complement table for dinucleotides
+    revcomp = new unsigned char[21];
+    for (int i = 0; i < 21; ++i) {
+        revcomp[i] = static_cast<unsigned char>('X');
+    }
+    // To handle the last incomplete dinucleotide
+    tail = new unsigned char[21];
+    for (int i = 0; i < 21; ++i) {
+        tail[i] = static_cast<unsigned char>('X');
     }
 }
 
 BaseMatrix::~BaseMatrix(){
     delete[] num2aa;
     delete[] aa2num;
+    delete[] revcomp;
+    delete[] tail;
     delete[] pBack;
     for (int i = 0; i < allocatedAlphabetSize; i++){
         delete[] probMatrix[i];

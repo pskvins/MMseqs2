@@ -135,7 +135,8 @@ ReducedMatrix::ReducedMatrix(double **probMatrix, float ** rMatrix,
     this->aa2num = aa2num_new;
 
 
-    setupLetterMapping();
+    // setupLetterMapping();
+    setupDinucleotideLetterMapping();
     for (size_t i = 0; i < origAlphabetSize-1; i++) {
         delete[] probMatrix_new[i];
         delete[] subMatrix_tmp[i];

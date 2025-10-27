@@ -5,6 +5,7 @@
 #include "SubstitutionMatrix.h"
 #include "Util.h"
 #include "sls_alignment_evaluer.hpp"
+#include <cmath>
 
 class EvalueComputation {
 public:
@@ -35,8 +36,8 @@ public:
 
     inline double computeEvalue(double score, double seqLength) {
         const double epa = evaluer.evaluePerArea( score );
-        const double a = area( score, seqLength );
-        return epa * a;
+        const double a = area( score, seqLength ) * 2; // double it for the reverse complement
+        return 0.0382461572658595 * pow(epa * a, 0.8283631544068919); // Correcting e-value
     }
 
     inline double computeLogEvalue(double score, double seqLength) {
@@ -77,7 +78,13 @@ private:
                                                        0.76221128839920349041, 0,
                                                        4.5269915477182944841,  0,
                                                        4.5269915477182944841,  0,
-                                                       4.5269915477182944841,  0}}
+                                                       4.5269915477182944841,  0}},
+                {"dinuc.out", 23, 1, true, {0.18542241, 36.332014,
+                                                        0.76221128839920349041, 0,
+                                                        0.76221128839920349041, 0,
+                                                        4.5269915477182944841,  0,
+                                                        4.5269915477182944841,  0,
+                                                        4.5269915477182944841,  0}}
         };
 
 
