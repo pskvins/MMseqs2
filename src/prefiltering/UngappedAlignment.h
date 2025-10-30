@@ -18,7 +18,7 @@ public:
 
     ~UngappedAlignment();
 
-    void createProfile(Sequence *seq, float *biasCorrection);
+    void createProfile(Sequence *seq, float *biasCorrection, bool reverse=false);
 
     // This function computes the diagonal score for each CounterResult object
     // it assigns the diagonal score to the CounterResult object

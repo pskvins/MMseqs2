@@ -2,6 +2,7 @@
 // Created by mad on 12/15/15.
 
 #include "UngappedAlignment.h"
+#include <algorithm>
 
 UngappedAlignment::UngappedAlignment(const unsigned int maxSeqLen,
                                      BaseMatrix *substitutionMatrix, SequenceLookup *sequenceLookup)
@@ -383,7 +384,7 @@ void UngappedAlignment::extractScores(unsigned int *score_arr, simd_int score) {
 
 
 void UngappedAlignment::createProfile(Sequence *seq,
-                                      float * biasCorrection) {
+                                      float * biasCorrection, bool reverse) {
     queryLen = seq->L;
     if(Parameters::isEqualDbtype(seq->getSequenceType(), Parameters::DBTYPE_HMM_PROFILE)) {
         memset(queryProfile, 0, (Sequence::PROFILE_AA_SIZE + 1) * seq->L);
@@ -391,7 +392,7 @@ void UngappedAlignment::createProfile(Sequence *seq,
         memset(queryProfile, 0, (Sequence::PROFILE_AA_SIZE + 1) * seq->L);
         for (int pos = 0; pos < seq->L; pos++) {
             float aaCorrBias = biasCorrection[pos];
-            aaCorrBias = (aaCorrBias < 0.0) ? aaCorrBias/4 - 0.5 : aaCorrBias/4 + 0.5;
+            aaCorrBias = (aaCorrBias < 0.0) ? aaCorrBias/4 - 0.5 : aaCorrBias/4 + 0.5; // Why divide with 4?
             aaCorrectionScore[pos] = static_cast<char>(aaCorrBias);
         }
     }
@@ -409,6 +410,24 @@ void UngappedAlignment::createProfile(Sequence *seq,
             for (int i = 0; i < subMatrix->alphabetSize; i++) {
                 queryProfile[pos * (Sequence::PROFILE_AA_SIZE + 1) + i] = (subMatrix->subMatrix[aaIdx][i] + aaCorrectionScore[pos]);
             }
+        }
+    }
+    // reverse profile if needed. The sequence itself is already reversed.
+    if (reverse) {
+        for (int pos = 0; pos < seq->L; pos++) {
+            // Swap following position pairs: (1,15), (2,6), (4,12), (5,7), (8,9), (10,11)
+            std::swap(queryProfile[pos * (Sequence::PROFILE_AA_SIZE + 1) + 1],
+                      queryProfile[pos * (Sequence::PROFILE_AA_SIZE + 1) + 15]);
+            std::swap(queryProfile[pos * (Sequence::PROFILE_AA_SIZE + 1) + 2],
+                      queryProfile[pos * (Sequence::PROFILE_AA_SIZE + 1) + 6]);
+            std::swap(queryProfile[pos * (Sequence::PROFILE_AA_SIZE + 1) + 4],
+                      queryProfile[pos * (Sequence::PROFILE_AA_SIZE + 1) + 12]);
+            std::swap(queryProfile[pos * (Sequence::PROFILE_AA_SIZE + 1) + 5],
+                      queryProfile[pos * (Sequence::PROFILE_AA_SIZE + 1) + 7]);
+            std::swap(queryProfile[pos * (Sequence::PROFILE_AA_SIZE + 1) + 8],
+                      queryProfile[pos * (Sequence::PROFILE_AA_SIZE + 1) + 9]);
+            std::swap(queryProfile[pos * (Sequence::PROFILE_AA_SIZE + 1) + 10],
+                      queryProfile[pos * (Sequence::PROFILE_AA_SIZE + 1) + 11]);
         }
     }
 }

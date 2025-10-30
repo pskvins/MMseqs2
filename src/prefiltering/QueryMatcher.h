@@ -61,20 +61,20 @@ public:
 
     // returns result for the sequence
     // identityId is the id of the identitical sequence in the target database if there is any, UINT_MAX otherwise
-    std::pair<hit_t*, size_t> matchQuery(Sequence *querySeq, unsigned int identityId,  bool isNucleotide);
+    std::pair<hit_t*, size_t> matchQuery(Sequence *querySeq, unsigned int identityId,  bool isNucleotide, bool reverse=false);
 
     void setQueryMatcherHook(QueryMatcherHook* hook) {
         this->hook = hook;
     }
 
     // set substituion matrix for KmerGenerator
-    void setProfileMatrix(ScoreMatrix **matrix){
-        kmerGenerator->setDivideStrategy(matrix);
+    void setProfileMatrix(ScoreMatrix **matrix, bool init = true){
+        kmerGenerator->setDivideStrategy(matrix, init);
     }
 
     // set substitution matrix
-    void setSubstitutionMatrix(ScoreMatrix *three, ScoreMatrix *two) {
-        kmerGenerator->setDivideStrategy(three, two);
+    void setSubstitutionMatrix(ScoreMatrix *three, ScoreMatrix *two, bool init = true) {
+        kmerGenerator->setDivideStrategy(three, two, init);
     }
 
     // get statistics

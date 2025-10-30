@@ -82,7 +82,7 @@ QueryMatcher::~QueryMatcher(){
     delete kmerGenerator;
 }
 
-std::pair<hit_t*, size_t> QueryMatcher::matchQuery(Sequence *querySeq, unsigned int identityId, bool isNucleotide) {
+std::pair<hit_t*, size_t> QueryMatcher::matchQuery(Sequence *querySeq, unsigned int identityId, bool isNucleotide, bool reverse) {
     querySeq->resetCurrPos();
 //    std::cout << "Id: " << querySeq->getId() << std::endl;
     memset(scoreSizes, 0, SCORE_RANGE * sizeof(unsigned int));
@@ -98,7 +98,7 @@ std::pair<hit_t*, size_t> QueryMatcher::matchQuery(Sequence *querySeq, unsigned 
         memset(compositionBias, 0, sizeof(float) * querySeq->L);
     }
     if(diagonalScoring == true){
-        ungappedAlignment->createProfile(querySeq, compositionBias);
+        ungappedAlignment->createProfile(querySeq, compositionBias, reverse);
     }
     size_t resultSize = match(querySeq, compositionBias);
     if (hook != NULL) {

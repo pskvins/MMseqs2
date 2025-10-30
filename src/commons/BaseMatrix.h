@@ -30,6 +30,7 @@ public:
 
     // substitution matrix
     short** subMatrix;
+    short** revSubMatrix;
     // substitution matrix for pseudocounts
     float** subMatrixPseudoCounts;
 
@@ -83,6 +84,8 @@ public:
     static std::pair<std::string, std::string> unserialize(const char * data);
     static char * serialize(std::string &matrixName, std::string &matrixData );
     static std::string unserializeName(const char * data);
+
+    void reverseMatrix();
 };
 
 

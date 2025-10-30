@@ -27,10 +27,12 @@ KmerGenerator::~KmerGenerator(){
     delete indexer;
 }
 
-void KmerGenerator::setDivideStrategy(ScoreMatrix ** one){
+void KmerGenerator::setDivideStrategy(ScoreMatrix ** one, bool init){
     this->divideStepCount = kmerSize;
-    this->matrixLookup = new ScoreMatrix*[divideStepCount];
-    this->divideStep   = new unsigned int[divideStepCount];
+    if (init) {
+        this->matrixLookup = new ScoreMatrix*[divideStepCount];
+        this->divideStep   = new unsigned int[divideStepCount];
+    }
     for(size_t i = 0; i < kmerSize; i++){
         this->divideStep[i] = 1;
         this->matrixLookup[i] = one[i];
@@ -38,14 +40,16 @@ void KmerGenerator::setDivideStrategy(ScoreMatrix ** one){
     initDataStructure();
 }
 
-void KmerGenerator::setDivideStrategy(ScoreMatrix * three, ScoreMatrix * two){
+void KmerGenerator::setDivideStrategy(ScoreMatrix * three, ScoreMatrix * two, bool init){
     const size_t threeDivideCount = this->kmerSize / 3;
 
     switch(kmerSize%3){
         case 0:
             this->divideStepCount=threeDivideCount;
-            this->matrixLookup= new ScoreMatrix*[divideStepCount];
-            this->divideStep = new unsigned int[divideStepCount];
+            if (init) {
+                this->matrixLookup= new ScoreMatrix*[divideStepCount];
+                this->divideStep = new unsigned int[divideStepCount];
+            }
             for(size_t i = 0; i < threeDivideCount; i++){
                 this->divideStep[i] = 3;
                 this->matrixLookup[i] = three;
@@ -53,8 +57,10 @@ void KmerGenerator::setDivideStrategy(ScoreMatrix * three, ScoreMatrix * two){
             break;
         case 1:
             this->divideStepCount=threeDivideCount+1;
-            this->matrixLookup= new ScoreMatrix*[divideStepCount];
-            this->divideStep = new unsigned int[divideStepCount];
+            if (init) {
+                this->matrixLookup= new ScoreMatrix*[divideStepCount];
+                this->divideStep = new unsigned int[divideStepCount];
+            }
             for(size_t i = 0; i < threeDivideCount-1; i++){
                 this->divideStep[i] = 3;
                 this->matrixLookup[i] = three;
@@ -68,8 +74,10 @@ void KmerGenerator::setDivideStrategy(ScoreMatrix * three, ScoreMatrix * two){
             break;
         case 2:
             this->divideStepCount=threeDivideCount+1;
-            this->matrixLookup= new ScoreMatrix*[divideStepCount];
-            this->divideStep = new unsigned int[divideStepCount];
+            if (init) {
+                this->matrixLookup= new ScoreMatrix*[divideStepCount];
+                this->divideStep = new unsigned int[divideStepCount];
+            }
             for(size_t i = 0; i < threeDivideCount; i++){
                 this->divideStep[i] = 3;
                 this->matrixLookup[i] = three;
@@ -80,7 +88,7 @@ void KmerGenerator::setDivideStrategy(ScoreMatrix * three, ScoreMatrix * two){
             break;
     }
 
-    initDataStructure();
+    if (init) initDataStructure();
     std::reverse(this->matrixLookup, &this->matrixLookup[divideStepCount]);
     std::reverse(this->divideStep, &this->divideStep[divideStepCount]);
 }

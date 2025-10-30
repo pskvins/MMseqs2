@@ -17,11 +17,11 @@ class KmerGenerator
 
         /* kmer splitting stragety (3,2)
          fill up the divide step and calls init_result_list */
-        void setDivideStrategy(ScoreMatrix * three, ScoreMatrix * two );
+        void setDivideStrategy(ScoreMatrix * three, ScoreMatrix * two , bool init = true);
 
         /* kmer splitting stragety (1)
          fill up the divide step and calls init_result_list */
-        void setDivideStrategy(ScoreMatrix ** one);
+        void setDivideStrategy(ScoreMatrix ** one, bool init = true);
 
 	    void setThreshold(short threshold);
     private:

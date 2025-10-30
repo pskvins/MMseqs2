@@ -38,11 +38,13 @@ BaseMatrix::~BaseMatrix(){
     for (int i = 0; i < allocatedAlphabetSize; i++){
         delete[] probMatrix[i];
         delete[] subMatrix[i];
+        delete[] revSubMatrix[i];
         free(subMatrixPseudoCounts[i]);
     }
     delete[] probMatrix;
     delete[] subMatrixPseudoCounts;
     delete[] subMatrix;
+    delete[] revSubMatrix;
 }
 
 
@@ -53,6 +55,7 @@ void BaseMatrix::initMatrixMemory(int alphabetSize) {
     pBack = new double[alphabetSize];
     probMatrix = new double*[alphabetSize];
     subMatrix = new short*[alphabetSize];
+    revSubMatrix = new short*[alphabetSize];
     subMatrixPseudoCounts = new float*[alphabetSize];
     // temporary memory setter
 
@@ -60,10 +63,12 @@ void BaseMatrix::initMatrixMemory(int alphabetSize) {
         pBack[i] = 0.0;
         probMatrix[i] = new double[alphabetSize];
         subMatrix[i] = new short[alphabetSize];
+        revSubMatrix[i] = new short[alphabetSize];
         subMatrixPseudoCounts[i] =  (float *) malloc_simd_float(alphabetSize * sizeof(float));
         for (int j = 0; j < alphabetSize; j++){
             probMatrix[i][j] = 0.0;
             subMatrix[i][j] = 0;
+            revSubMatrix[i][j] = 0;
             subMatrixPseudoCounts[i][j] = 0.0;
         }
     }
@@ -240,4 +245,18 @@ std::string BaseMatrix::unserializeName(const char * data) {
         }
     }
     return data;
+}
+
+void BaseMatrix::reverseMatrix() {
+    // Map to the complements (i.e. from L -> L to L -> K) based on below
+    /* {'C': 'S', 'G': 'I', 'L': 'K', 'Q': 'Q', 'D': 'H', 
+        'F': 'P', 'R': 'R', 'K': 'L', 'M': 'N', 'A': 'A', 
+        'P': 'F', 'I': 'G', 'E': 'E', 'N': 'M', 'H': 'D', 'S': 'C', 'X': 'X'} */
+    for (int i = 0; i < alphabetSize; i++) {
+        short *subMatLine = subMatrix[i];
+        short *revSubMatLine = revSubMatrix[i];
+        for (int j = 0; j < alphabetSize; j++) {
+            revSubMatLine[j] = subMatLine[revcomp[j]];
+        }
+    }
 }

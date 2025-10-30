@@ -66,13 +66,17 @@ Prefiltering::Prefiltering(const std::string &queryDB,
             break;
         case Parameters::DBTYPE_AMINO_ACIDS:
             kmerSubMat = getSubstitutionMatrix(seedScoringMatrixFile, par.alphabetSize, 8.0, false, false);
+            kmerSubMat->reverseMatrix();
             ungappedSubMat = getSubstitutionMatrix(scoringMatrixFile, par.alphabetSize, 2.0, false, false);
+            ungappedSubMat->reverseMatrix();
             alphabetSize = kmerSubMat->alphabetSize;
             break;
         case Parameters::DBTYPE_HMM_PROFILE:
             // needed for Background distributions
             kmerSubMat = getSubstitutionMatrix(scoringMatrixFile, par.alphabetSize, 8.0, false, false);
+            kmerSubMat->reverseMatrix();
             ungappedSubMat = getSubstitutionMatrix(scoringMatrixFile, par.alphabetSize, 2.0, false, false);
+            ungappedSubMat->reverseMatrix();
             alphabetSize = kmerSubMat->alphabetSize;
             break;
         default:
@@ -210,6 +214,8 @@ Prefiltering::Prefiltering(const std::string &queryDB,
         kmerSubMat->alphabetSize = kmerSubMat->alphabetSize - 1;
         _2merSubMatrix = getScoreMatrix(*kmerSubMat, 2);
         _3merSubMatrix = getScoreMatrix(*kmerSubMat, 3);
+        _rev2merSubMatrix = getScoreMatrix(*kmerSubMat, 2, true);
+        _rev3merSubMatrix = getScoreMatrix(*kmerSubMat, 3, true);
         kmerSubMat->alphabetSize = alphabetSize;
     }
 
@@ -262,6 +268,8 @@ Prefiltering::~Prefiltering() {
     if (templateDBIsIndex == false || preloadMode == Parameters::PRELOAD_MODE_FREAD) {
         ExtendedSubstitutionMatrix::freeScoreMatrix(_3merSubMatrix);
         ExtendedSubstitutionMatrix::freeScoreMatrix(_2merSubMatrix);
+        ExtendedSubstitutionMatrix::freeScoreMatrix(_rev3merSubMatrix);
+        ExtendedSubstitutionMatrix::freeScoreMatrix(_rev2merSubMatrix);
     }
 
     if (kmerSubMat != ungappedSubMat) {
@@ -496,7 +504,7 @@ void Prefiltering::mergeTargetSplits(const std::string &outDB, const std::string
 }
 
 
-ScoreMatrix Prefiltering::getScoreMatrix(const BaseMatrix& matrix, const size_t kmerSize) {
+ScoreMatrix Prefiltering::getScoreMatrix(const BaseMatrix& matrix, const size_t kmerSize, bool reverse) {
     if (templateDBIsIndex == true) {
         switch(kmerSize) {
             case 2:
@@ -507,7 +515,7 @@ ScoreMatrix Prefiltering::getScoreMatrix(const BaseMatrix& matrix, const size_t 
                 break;
         }
     }
-    return ExtendedSubstitutionMatrix::calcScoreMatrix(matrix, kmerSize);
+    return ExtendedSubstitutionMatrix::calcScoreMatrix(matrix, kmerSize, reverse);
 
 }
 
@@ -785,7 +793,7 @@ bool Prefiltering::runSplit(const std::string &resultDB, const std::string &resu
     Debug(Debug::INFO) << "Starting prefiltering scores calculation (step " << (split + 1) << " of " << splits << ")\n";
     Debug(Debug::INFO) << "Query db start " << (queryFrom + 1) << " to " << queryFrom + querySize << "\n";
     Debug(Debug::INFO) << "Target db start " << (dbFrom + 1) << " to " << dbFrom + dbSize << "\n";
-    Debug::Progress progress(querySize);
+    Debug::Progress progress(querySize*2); // *2 for reverse sequences
 
 #pragma omp parallel num_threads(localThreads)
     {
@@ -867,6 +875,90 @@ bool Prefiltering::runSplit(const std::string &resultDB, const std::string &resu
                 result.append(buffer, len);
             }
             tmpDbw.writeData(result.c_str(), result.length(), qKey, thread_idx);
+            result.clear();
+
+            // update statistics counters
+            if (resultSize != 0) {
+                notEmpty[id - queryFrom] = 1;
+            }
+
+            if (Debug::debugLevel >= Debug::INFO) {
+                kmersPerPos += matcher.getStatistics()->kmersPerPos;
+                dbMatches += matcher.getStatistics()->dbMatches;
+                doubleMatches += matcher.getStatistics()->doubleMatches;
+                querySeqLenSum += seq.L;
+                diagonalOverflow += matcher.getStatistics()->diagonalOverflow;
+                resSize += resultSize;
+                reslens[thread_idx]->emplace_back(resultSize);
+            }
+        } // step end
+
+        // Same for the reversed query
+        if (seq.profile_matrix != NULL) {
+            matcher.setProfileMatrix(seq.profile_matrix, false);
+        } else if (_rev3merSubMatrix.isValid() && _rev2merSubMatrix.isValid()) {
+            matcher.setSubstitutionMatrix(&_rev3merSubMatrix, &_rev2merSubMatrix, false);
+        } else {
+            matcher.setSubstitutionMatrix(NULL, NULL, false);
+        }
+
+        result.clear();
+
+#pragma omp for schedule(dynamic, 1) reduction (+: kmersPerPos, resSize, dbMatches, doubleMatches, querySeqLenSum, diagonalOverflow)
+        for (size_t id = queryFrom; id < queryFrom + querySize; id++) {
+            progress.updateProgress();
+            // get query sequence
+            char *seqData = qdbr->getData(id, thread_idx);
+            unsigned int qKey = qdbr->getDbKey(id);
+            seq.mapSequence(id, qKey, seqData, qdbr->getSeqLen(id));
+            // Reverse the sequence
+            std::reverse(seq.numSequence, seq.numSequence + seq.L);
+            size_t targetSeqId = UINT_MAX;
+            if (sameQTDB || includeIdentical) {
+                targetSeqId = tdbr->getId(seq.getDbKey());
+                // only the corresponding split should include the id (hack for the hack)
+                if (targetSeqId >= dbFrom && targetSeqId < (dbFrom + dbSize) && targetSeqId != UINT_MAX) {
+                    targetSeqId = targetSeqId - dbFrom;
+                    if(targetSeqId > tdbr->getSize()){
+                        Debug(Debug::ERROR) << "targetSeqId: " << targetSeqId << " > target database size: "  << tdbr->getSize() <<  "\n";
+                        EXIT(EXIT_FAILURE);
+                    }
+                }else{
+                    targetSeqId = UINT_MAX;
+                }
+            }
+            // calculate prefiltering results
+            if (taxonomyHook != NULL) {
+                taxonomyHook->setDbFrom(dbFrom);
+            }
+            std::pair<hit_t *, size_t> prefResults = matcher.matchQuery(&seq, targetSeqId, targetSeqType==Parameters::DBTYPE_NUCLEOTIDES, true);
+            size_t resultSize = prefResults.second;
+            const float queryLength = static_cast<float>(qdbr->getSeqLen(id));
+            for (size_t i = 0; i < resultSize; i++) {
+                hit_t *res = prefResults.first + i;
+                // correct the 0 indexed sequence id again to its real identifier
+                size_t targetSeqId1 = res->seqId + dbFrom;
+                // replace id with key
+                res->seqId = tdbr->getDbKey(targetSeqId1);
+                if (UNLIKELY(targetSeqId1 >= tdbr->getSize())) {
+                    Debug(Debug::WARNING) << "Wrong prefiltering result for query: " << qdbr->getDbKey(id) << " -> " << targetSeqId1 << "\t" << res->prefScore << "\n";
+                }
+
+                // TODO: check if this should happen when diagonalScoring == false
+                if (covThr > 0.0 && (covMode == Parameters::COV_MODE_BIDIRECTIONAL
+                                               || covMode == Parameters::COV_MODE_QUERY
+                                               || covMode == Parameters::COV_MODE_LENGTH_SHORTER )) {
+                    const float targetLength = static_cast<float>(tdbr->getSeqLen(targetSeqId1));
+                    if (Util::canBeCovered(covThr, covMode, queryLength, targetLength) == false) {
+                        continue;
+                    }
+                }
+
+                // write prefiltering results to a string
+                int len = QueryMatcher::prefilterHitToBuffer(buffer, *res);
+                result.append(buffer, len);
+            }
+            tmpDbw.writeData(result.c_str(), result.length(), qKey+querySize, thread_idx);
             result.clear();
 
             // update statistics counters
@@ -1088,8 +1180,9 @@ size_t Prefiltering::estimateMemoryConsumption(int split, size_t dbSize, size_t 
     // extended matrix
     size_t extendedMatrix = 0;
     if(Parameters::isEqualDbtype(querySeqType, Parameters::DBTYPE_AMINO_ACIDS)){
-        extendedMatrix = sizeof(std::pair<short, unsigned int>) * static_cast<size_t>(pow(pow(alphabetSize, 3), 2));
-        extendedMatrix += sizeof(std::pair<short, unsigned int>) * pow(pow(alphabetSize, 2), 2);
+        // Use two folds of extended matrices... for now
+        extendedMatrix = sizeof(std::pair<short, unsigned int>) * static_cast<size_t>(pow(pow(alphabetSize, 3), 2)) * 2;
+        extendedMatrix += sizeof(std::pair<short, unsigned int>) * pow(pow(alphabetSize, 2), 2) * 2;
     }
     // some memory needed to keep the index, ....
     size_t background = dbSize * 22;

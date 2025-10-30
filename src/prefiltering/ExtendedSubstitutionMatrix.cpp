@@ -17,8 +17,11 @@ struct sort_by_score {
     }
 };
 
-ScoreMatrix ExtendedSubstitutionMatrix::calcScoreMatrix(const BaseMatrix& matrix, const size_t kmerSize){
+ScoreMatrix ExtendedSubstitutionMatrix::calcScoreMatrix(const BaseMatrix& matrix, const size_t kmerSize, bool reverse){
     short ** subMatrix = matrix.subMatrix;
+    if (reverse) {
+        subMatrix = matrix.revSubMatrix;
+    }
     const size_t alphabetSize = matrix.alphabetSize;
     size_t size = pow(alphabetSize, kmerSize);
     size_t row_size = size / MAX_ALIGN_INT;
