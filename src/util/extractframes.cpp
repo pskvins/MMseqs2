@@ -6,6 +6,7 @@
 #include "Util.h"
 #include "TranslateNucl.h"
 #include "Orf.h"
+#include "Sequence.h"
 
 #include <unistd.h>
 #include <climits>
@@ -103,15 +104,7 @@ int extractframes(int argc, const char **argv, const Command& command) {
             const char* data = reader.getData(i, thread_idx);
             size_t seqLen = reader.getSeqLen(i);
 
-            if (forwardFrames & Orf::FRAME_1) {
-                handleSingleFrame(translateNucl, sequenceWriter, headerWriter, key, buffer, data, seqLen, 0, false, par.translate, aa, aaBufferSize, thread_idx);
-            }
-            if (forwardFrames & Orf::FRAME_2) {
-                handleSingleFrame(translateNucl, sequenceWriter, headerWriter, key, buffer, data, seqLen, 1, false, par.translate, aa, aaBufferSize, thread_idx);
-            }
-            if (forwardFrames & Orf::FRAME_3) {
-                handleSingleFrame(translateNucl, sequenceWriter, headerWriter, key, buffer, data, seqLen, 2, false, par.translate, aa, aaBufferSize, thread_idx);
-            }
+            handleSingleFrame(translateNucl, sequenceWriter, headerWriter, key, buffer, data, seqLen, 0, false, par.translate, aa, aaBufferSize, thread_idx);
 
             if (reverseFrames != 0) {
                 // bool hasWrongChar = false;

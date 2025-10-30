@@ -767,10 +767,11 @@ Parameters::Parameters():
 
     // extract frames
     extractframes.push_back(&PARAM_ORF_FORWARD_FRAMES);
-    extractframes.push_back(&PARAM_ORF_REVERSE_FRAMES);    
-    extractframes.push_back(&PARAM_TRANSLATION_TABLE);
-    extractframes.push_back(&PARAM_TRANSLATE);
-    extractframes.push_back(&PARAM_CREATE_LOOKUP);
+    extractframes.push_back(&PARAM_ORF_REVERSE_FRAMES);  
+    extractframes.push_back(&PARAM_SUB_MAT);  
+    // extractframes.push_back(&PARAM_TRANSLATION_TABLE);
+    // extractframes.push_back(&PARAM_TRANSLATE);
+    // extractframes.push_back(&PARAM_CREATE_LOOKUP);
     extractframes.push_back(&PARAM_THREADS);
     extractframes.push_back(&PARAM_COMPRESSED);
     extractframes.push_back(&PARAM_V);
