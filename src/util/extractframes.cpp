@@ -4,9 +4,10 @@
 #include "DBWriter.h"
 #include "Matcher.h"
 #include "Util.h"
-#include "TranslateNucl.h"
 #include "Orf.h"
 #include "Sequence.h"
+#include "SubstitutionMatrix.h"
+#include "PSSMCalculator.h"
 
 #include <unistd.h>
 #include <climits>
@@ -16,7 +17,7 @@
 #include <omp.h>
 #endif
 
-void handleSingleFrame(TranslateNucl& translateNucl, DBWriter& sequenceWriter, DBWriter& headerWriter, unsigned int key, char* headerBuffer, const char* data, size_t seqLen, int frame, bool reverse, bool translate, char*& aaBuffer, size_t& aaBufferSize, int thread_idx) {
+void handleSingleFrame(DBWriter& sequenceWriter, DBWriter& headerWriter, unsigned int key, char* headerBuffer, Sequence* seq, size_t seqLen, char*& aaBuffer, size_t& aaBufferSize, int thread_idx) {
     data = data + frame;
     seqLen = seqLen - frame;
     if (translate == true) {
@@ -58,27 +59,23 @@ int extractframes(int argc, const char **argv, const Command& command) {
     DBReader<unsigned int> reader(par.db1.c_str(), par.db1Index.c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
     reader.open(DBReader<unsigned int>::NOSORT);
 
-    int outputDbtype = reader.getDbtype();
-    if (par.translate) {
-        outputDbtype = Parameters::DBTYPE_AMINO_ACIDS;
-    }
+    int outputDbtype = Parameters::DBTYPE_HMM_PROFILE;
     DBWriter sequenceWriter(par.db2.c_str(), par.db2Index.c_str(), par.threads, par.compressed, outputDbtype);
     sequenceWriter.open();
 
     DBWriter headerWriter(par.hdr2.c_str(), par.hdr2Index.c_str(), par.threads, false, Parameters::DBTYPE_GENERIC_DB);
     headerWriter.open();
 
-    unsigned int forwardFrames = Orf::getFrames(par.forwardFrames);
-    unsigned int reverseFrames = Orf::getFrames(par.reverseFrames);
+    BaseMatrix *subMat = SubstitutionMatrix::getSubstitutionMatrix(par.scoringMatrixFile, par.alphabetSize, 2.0, false, false);
 
     Debug::Progress progress(reader.getSize());
-    TranslateNucl translateNucl(static_cast<TranslateNucl::GenCode>(par.translationTable));
 #pragma omp parallel
     {
         int thread_idx = 0;
 #ifdef OPENMP
         thread_idx = omp_get_thread_num();
 #endif
+        Sequence seq(reader.getMaxSeqLen(), Parameters::DBTYPE_AMINO_ACIDS, subMat, 6, false, false, "");
         size_t querySize = 0;
         size_t queryFrom = 0;
         reader.decomposeDomainByAminoAcid(thread_idx, par.threads, &queryFrom, &querySize);
@@ -94,8 +91,9 @@ int extractframes(int argc, const char **argv, const Command& command) {
 
         char buffer[1024];
 
-        std::string reverseComplementStr;
-        reverseComplementStr.reserve(32000);
+        PSSMCalculator calculator(
+            &subMat, maxSeqLength + 1, reader.getMaxSeqLen(), par.pcmode, par.pca, par.pcb
+        );
 
         for (unsigned int i = queryFrom; i < (queryFrom + querySize); ++i){
             progress.updateProgress();
@@ -104,7 +102,9 @@ int extractframes(int argc, const char **argv, const Command& command) {
             const char* data = reader.getData(i, thread_idx);
             size_t seqLen = reader.getSeqLen(i);
 
-            handleSingleFrame(translateNucl, sequenceWriter, headerWriter, key, buffer, data, seqLen, 0, false, par.translate, aa, aaBufferSize, thread_idx);
+            seq.mapSequence(i, key, data, seqLen);
+
+            handleSingleFrame(sequenceWriter, headerWriter, key, buffer, &seq, seqLen, aa, aaBufferSize, thread_idx);
 
             if (reverseFrames != 0) {
                 // bool hasWrongChar = false;
@@ -121,18 +121,7 @@ int extractframes(int argc, const char **argv, const Command& command) {
                 data = reverseComplementStr.c_str();
             }
 
-            if (reverseFrames & Orf::FRAME_1) {
-                handleSingleFrame(translateNucl, sequenceWriter, headerWriter, key, buffer, data, seqLen, 0, true, par.translate, aa, aaBufferSize, thread_idx);
-            }
-                
-            if (reverseFrames & Orf::FRAME_2) {
-                handleSingleFrame(translateNucl, sequenceWriter, headerWriter, key, buffer, data, seqLen, 1, true, par.translate, aa, aaBufferSize, thread_idx);
-            }
-                
-            if (reverseFrames & Orf::FRAME_3) {
-                handleSingleFrame(translateNucl, sequenceWriter, headerWriter, key, buffer, data, seqLen, 2, true, par.translate, aa, aaBufferSize, thread_idx);
-            }
-            reverseComplementStr.clear();
+            handleSingleFrame(sequenceWriter, headerWriter, key, buffer, &seq, seqLen, aa, aaBufferSize, thread_idx);
         }
         if (aa != NULL) {
             free(aa);
