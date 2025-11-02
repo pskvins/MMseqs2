@@ -954,6 +954,13 @@ std::vector<Command> baseCommands = {
                 "<i:sequenceDB> <o:sequenceDB>",
                 CITATION_MMSEQS2, {{"sequenceDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
                                                            {"sequenceDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::sequenceDb }}},
+        {"extractqueryprofiles", extractqueryprofiles, &par.extractqueryprofiles, COMMAND_SEQUENCE,
+                "Extract forward and reversed query profiles from query DB",
+                NULL,
+                "Sukhwan Park <pskvins@snu.ac.kr>",
+                "<i:queryDB> <o:profileDB>",
+                CITATION_MMSEQS2, {{"queryDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
+                                          {"profileDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::profileDb }}},
         //TODO remove later?
         {"orftocontig",          orftocontig,          &par.orftocontig,          COMMAND_SEQUENCE,
                 "Write ORF locations in alignment format",

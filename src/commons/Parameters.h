@@ -1183,6 +1183,7 @@ public:
     std::vector<MMseqsParameter*> result2stats;
     std::vector<MMseqsParameter*> extractorfs;
     std::vector<MMseqsParameter*> extractframes;
+    std::vector<MMseqsParameter*> extractqueryprofiles;
     std::vector<MMseqsParameter*> orftocontig;
     std::vector<MMseqsParameter*> reverseseq;
     std::vector<MMseqsParameter*> splitdb;

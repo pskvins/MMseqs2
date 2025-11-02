@@ -768,16 +768,22 @@ Parameters::Parameters():
     // extract frames
     extractframes.push_back(&PARAM_ORF_FORWARD_FRAMES);
     extractframes.push_back(&PARAM_ORF_REVERSE_FRAMES);  
-    extractframes.push_back(&PARAM_SUB_MAT);  
-    extractframes.push_back(&PARAM_PC_MODE);
-    extractframes.push_back(&PARAM_PCA);
-    extractframes.push_back(&PARAM_PCB);
-    // extractframes.push_back(&PARAM_TRANSLATION_TABLE);
-    // extractframes.push_back(&PARAM_TRANSLATE);
-    // extractframes.push_back(&PARAM_CREATE_LOOKUP);
+    extractframes.push_back(&PARAM_TRANSLATION_TABLE);
+    extractframes.push_back(&PARAM_TRANSLATE);
+    extractframes.push_back(&PARAM_CREATE_LOOKUP);
     extractframes.push_back(&PARAM_THREADS);
     extractframes.push_back(&PARAM_COMPRESSED);
     extractframes.push_back(&PARAM_V);
+
+    // extract query profile
+    extractqueryprofiles.push_back(&PARAM_SUB_MAT);
+    extractqueryprofiles.push_back(&PARAM_PC_MODE);
+    extractqueryprofiles.push_back(&PARAM_PCA);
+    extractqueryprofiles.push_back(&PARAM_PCB);
+    extractqueryprofiles.push_back(&PARAM_WG);
+    extractqueryprofiles.push_back(&PARAM_THREADS);
+    extractqueryprofiles.push_back(&PARAM_COMPRESSED);
+    extractqueryprofiles.push_back(&PARAM_V);
 
     // orf to contig
     orftocontig.push_back(&PARAM_THREADS);
@@ -2553,8 +2559,8 @@ void Parameters::setDefaults() {
     filterMinEnable = 0;
     wg = false;
     pcmode = PCMODE_SUBSTITUTION_SCORE;
-    pca = MultiParam<PseudoCounts>(PseudoCounts(1.1, 1.4));
-    pcb = MultiParam<PseudoCounts>(PseudoCounts(4.1, 5.8));
+    pca = MultiParam<PseudoCounts>(PseudoCounts(1.0, 1.0));
+    pcb = MultiParam<PseudoCounts>(PseudoCounts(2.1, 2.1));
     profileOutputMode = 0;
 
     // sequence2profile

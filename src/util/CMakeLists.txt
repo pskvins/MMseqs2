@@ -60,6 +60,7 @@ set(util_source_files
         util/reverseseq.cpp
         util/cpmvrmlndb.cpp
         util/extractframes.cpp
+	util/extractqueryprofiles.cpp
         util/sequence2profile.cpp
         util/setextendeddbtype.cpp
         util/sortresult.cpp
