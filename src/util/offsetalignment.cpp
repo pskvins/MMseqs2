@@ -198,7 +198,8 @@ int offsetalignment(int argc, const char **argv, const Command &command) {
         Debug(Debug::ERROR) << "Please recreate your database or add a .dbtype file to your sequence/profile database.\n";
         return EXIT_FAILURE;
     }
-    const bool queryNucl = Parameters::isEqualDbtype(queryDbType, Parameters::DBTYPE_NUCLEOTIDES);
+    // const bool queryNucl = Parameters::isEqualDbtype(queryDbType, Parameters::DBTYPE_NUCLEOTIDES);
+    const bool queryNucl = true;
     IndexReader *qSourceDbr = NULL;
     if (queryNucl) {
         qSourceDbr = new IndexReader(par.db1.c_str(), par.threads, IndexReader::SRC_SEQUENCES, (touch) ? (IndexReader::PRELOAD_INDEX) : 0, DBReader<unsigned int>::USE_INDEX);
@@ -216,7 +217,8 @@ int offsetalignment(int argc, const char **argv, const Command &command) {
         Debug(Debug::ERROR) << "Please recreate your database or add a .dbtype file to your sequence/profile database.\n";
         return EXIT_FAILURE;
     }
-    const bool targetNucl = Parameters::isEqualDbtype(targetDbType, Parameters::DBTYPE_NUCLEOTIDES);
+    // const bool targetNucl = Parameters::isEqualDbtype(targetDbType, Parameters::DBTYPE_NUCLEOTIDES);
+    const bool targetNucl = true;
     IndexReader *tSourceDbr = NULL;
     bool isSameSrcDB = (par.db3.compare(par.db1) == 0);
     bool isNuclNuclSearch = false;
@@ -232,8 +234,10 @@ int offsetalignment(int argc, const char **argv, const Command &command) {
 
         if(Parameters::isEqualDbtype(tSourceDbr->getDbtype(), Parameters::DBTYPE_INDEX_DB)){
             IndexReader tseqDbr(par.db3, par.threads, IndexReader::SEQUENCES, 0, IndexReader::PRELOAD_INDEX);
-            seqtargetNuc = Parameters::isEqualDbtype(tseqDbr.sequenceReader->getDbtype(), Parameters::DBTYPE_NUCLEOTIDES);
-            isTransNucTransNucSearch = Parameters::isEqualDbtype(tseqDbr.sequenceReader->getDbtype(), Parameters::DBTYPE_AMINO_ACIDS);
+            // seqtargetNuc = Parameters::isEqualDbtype(tseqDbr.sequenceReader->getDbtype(), Parameters::DBTYPE_NUCLEOTIDES);
+            seqtargetNuc = true;
+            // isTransNucTransNucSearch = Parameters::isEqualDbtype(tseqDbr.sequenceReader->getDbtype(), Parameters::DBTYPE_AMINO_ACIDS);
+            isTransNucTransNucSearch = false;
             if(par.searchType == Parameters::SEARCH_TYPE_TRANS_NUCL_ALN){
                 isTransNuclAln = true;
             }
@@ -270,7 +274,8 @@ int offsetalignment(int argc, const char **argv, const Command &command) {
     unsigned int *contigOffsets = NULL;
     char *contigExists = NULL;
     unsigned int maxContigKey = 0;
-    if (Parameters::isEqualDbtype(queryDbType, Parameters::DBTYPE_NUCLEOTIDES)) {
+    // if (Parameters::isEqualDbtype(queryDbType, Parameters::DBTYPE_NUCLEOTIDES)) {
+    if (true) {
         Timer timer;
         Debug(Debug::INFO) << "Computing ORF lookup\n";
         unsigned int maxOrfKey = alnDbr.getLastKey();
@@ -339,7 +344,8 @@ int offsetalignment(int argc, const char **argv, const Command &command) {
     resultWriter.open();
 
     size_t entryCount = alnDbr.getSize();
-    if (Parameters::isEqualDbtype(queryDbType, Parameters::DBTYPE_NUCLEOTIDES)) {
+    // if (Parameters::isEqualDbtype(queryDbType, Parameters::DBTYPE_NUCLEOTIDES)) {
+    if (true) {
         entryCount = maxContigKey + 1;
     }
     Debug::Progress progress(entryCount);
@@ -369,7 +375,8 @@ int offsetalignment(int argc, const char **argv, const Command &command) {
             unsigned int queryKey=UINT_MAX;
             unsigned int qLen = UINT_MAX;
 
-            if (Parameters::isEqualDbtype(queryDbType, Parameters::DBTYPE_NUCLEOTIDES)) {
+            // if (Parameters::isEqualDbtype(queryDbType, Parameters::DBTYPE_NUCLEOTIDES)) {
+            if (true) {
                 queryKey = i;
                 if (contigExists[i] == 0) {
                     continue;
@@ -416,7 +423,8 @@ int offsetalignment(int argc, const char **argv, const Command &command) {
                         tmp.clear();
                     }
                 }
-            } else if (Parameters::isEqualDbtype(targetDbType, Parameters::DBTYPE_NUCLEOTIDES)) {
+            // } else if (Parameters::isEqualDbtype(targetDbType, Parameters::DBTYPE_NUCLEOTIDES)) {
+            } else if (true) {
                 queryKey = alnDbr.getDbKey(i);
                 if (qSourceDbr != NULL) {
                     size_t queryId = qSourceDbr->sequenceReader->getId(queryKey);

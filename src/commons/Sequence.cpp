@@ -276,7 +276,11 @@ void Sequence::mapProfile(const char * profileData, unsigned int seqLen){
     }
     // set the X value to 0
     if(subMat->alphabetSize - PROFILE_AA_SIZE != 0){
-        memset(&profile_for_alignment[(subMat->alphabetSize-1) * this-> L], 0, this->L);
+        memset(&profile_for_alignment[(subMat->alphabetSize-1) * this-> L], 0, this->L); // X (20)
+        memset(&profile_for_alignment[(subMat->alphabetSize-2) * this-> L], 0, this->L); // 19
+        memset(&profile_for_alignment[(subMat->alphabetSize-3) * this-> L], 0, this->L); // 18
+        memset(&profile_for_alignment[(subMat->alphabetSize-4) * this-> L], 0, this->L); // 17
+        memset(&profile_for_alignment[(subMat->alphabetSize-5) * this-> L], 0, this->L); // 16
     }
 
     // kmerSize != 0 => Prefilter
