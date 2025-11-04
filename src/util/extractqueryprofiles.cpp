@@ -33,13 +33,15 @@ int extractqueryprofiles(int argc, const char **argv, const Command& command) {
     maxSeqLength *= (VECSIZE_INT * 4);
 
     int outputDbtype = Parameters::DBTYPE_HMM_PROFILE;
+    if (par.pcmode == Parameters::PCMODE_CONTEXT_SPECIFIC) {
+        outputDbtype = DBReader<unsigned int>::setExtendedDbtype(outputDbtype, Parameters::DBTYPE_EXTENDED_CONTEXT_PSEUDO_COUNTS);
+    }
     DBWriter sequenceWriter(par.db2.c_str(), par.db2Index.c_str(), par.threads, par.compressed, outputDbtype);
     sequenceWriter.open();
 
     DBWriter headerWriter(par.hdr2.c_str(), par.hdr2Index.c_str(), par.threads, false, Parameters::DBTYPE_GENERIC_DB);
     headerWriter.open();
 
-    // BaseMatrix *subMat = Prefiltering::getSubstitutionMatrix(par.scoringMatrixFile, par.alphabetSize, 2.0, false, false);
     SubstitutionMatrix subMat(par.scoringMatrixFile.values.aminoacid().c_str(), 2.0, -0.2f);
 
     Debug::Progress progress(reader->getSize());
@@ -49,7 +51,7 @@ int extractqueryprofiles(int argc, const char **argv, const Command& command) {
 #ifdef OPENMP
         thread_idx = omp_get_thread_num();
 #endif
-        Sequence seq(maxSeqLength, Parameters::DBTYPE_AMINO_ACIDS, &subMat, 0, false, true);
+        Sequence seq(maxSeqLength + 1, Parameters::DBTYPE_AMINO_ACIDS, &subMat, 0, false, par.compBiasCorrection != 0);
         size_t querySize = 0;
         size_t queryFrom = 0;
         reader->decomposeDomainByAminoAcid(thread_idx, par.threads, &queryFrom, &querySize);
@@ -115,6 +117,16 @@ int extractqueryprofiles(int argc, const char **argv, const Command& command) {
             // Reverse the msaSequences[0], pssmRes.consensus, pssmRes.pssm
             std::reverse(msaSequences[0], msaSequences[0] + seqLen);
             std::reverse(pssmRes.consensus, pssmRes.consensus + seqLen);
+            char tmpPssm[Sequence::PROFILE_AA_SIZE];
+            int i_curr = 0;
+            int j_curr = (seqLen - 1) * Sequence::PROFILE_AA_SIZE;
+            for (size_t pos = 0; pos < seqLen/2; pos++) {
+                memcpy(&tmpPssm[0], pssmRes.pssm + i_curr, Sequence::PROFILE_AA_SIZE * sizeof(char));
+                memcpy(pssmRes.pssm + i_curr, pssmRes.pssm + j_curr, Sequence::PROFILE_AA_SIZE * sizeof(char));
+                memcpy(pssmRes.pssm + j_curr, &tmpPssm[0], Sequence::PROFILE_AA_SIZE * sizeof(char));
+                i_curr += Sequence::PROFILE_AA_SIZE;
+                j_curr -= Sequence::PROFILE_AA_SIZE;
+            }
             for (size_t pos = 0; pos < seqLen; pos++) {
                 // Swap following position pairs: (1,15), (2,6), (4,12), (5,7), (8,9), (10,11)
                 std::swap(pssmRes.pssm[pos * Sequence::PROFILE_AA_SIZE + 1], pssmRes.pssm[pos * Sequence::PROFILE_AA_SIZE + 15]);
@@ -129,6 +141,7 @@ int extractqueryprofiles(int argc, const char **argv, const Command& command) {
             
             bufferLen = Orf::writeOrfHeader(buffer, key, seqLen - 1, static_cast<size_t>(0), 0, 0);
             headerWriter.writeData(buffer, bufferLen, key, thread_idx);
+            result.clear();
         }
         if (aa != NULL) {
             free(aa);

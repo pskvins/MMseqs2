@@ -778,6 +778,8 @@ Parameters::Parameters():
     // extract query profile
     extractqueryprofiles.push_back(&PARAM_SUB_MAT);
     extractqueryprofiles.push_back(&PARAM_PC_MODE);
+    extractqueryprofiles.push_back(&PARAM_NO_COMP_BIAS_CORR);
+    extractqueryprofiles.push_back(&PARAM_NO_COMP_BIAS_CORR_SCALE);
     extractqueryprofiles.push_back(&PARAM_PCA);
     extractqueryprofiles.push_back(&PARAM_PCB);
     extractqueryprofiles.push_back(&PARAM_WG);

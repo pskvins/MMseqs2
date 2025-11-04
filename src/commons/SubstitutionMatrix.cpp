@@ -415,6 +415,11 @@ void SubstitutionMatrix::setupDinucleotideLetterMapping(){
     this->revcomp[this->aa2num[(int)'H']] = this->aa2num[(int)'D'];
     this->revcomp[this->aa2num[(int)'S']] = this->aa2num[(int)'C'];
     this->revcomp[this->aa2num[(int)'X']] = this->aa2num[(int)'X'];
+    // For paddings
+    this->revcomp[16] = 16;
+    this->revcomp[17] = 17;
+    this->revcomp[18] = 18;
+    this->revcomp[19] = 19;
     
     // Set up tail
     /* {'C': 'G', 'G': 'F', 'L': 'A', 'Q': 'N',
