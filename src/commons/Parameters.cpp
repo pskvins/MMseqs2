@@ -2469,7 +2469,7 @@ void Parameters::setDefaults() {
     compBiasCorrectionScale = 1.0;
     diagonalScoring = true;
     exactKmerMatching = 0;
-    maskMode = 1;
+    maskMode = 0;
     maskProb = 0.9;
     maskLowerCaseMode = 0;
     maskNrepeats = 0;

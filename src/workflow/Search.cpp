@@ -9,7 +9,7 @@
 #include "blastpgp.sh.h"
 #include "translated_search.sh.h"
 #include "blastp.sh.h"
-#include "blastn.sh.h"
+#include "blastdi.sh.h"
 #include "iterativepp.sh.h"
 #include "Parameters.h"
 
@@ -183,16 +183,16 @@ void setNuclSearchDefaults(Parameters *p) {
         p->alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV_SEQID;
     }
     //p->orfLongest = true;
-    p->exactKmerMatching = true;
+    // p->exactKmerMatching = true;
 //    if ( p->PARAM_DIAGONAL_SCORING.wasSet == false) {
 //        p->diagonalScoring = 0;
 //    }
-    if ( p->PARAM_STRAND.wasSet == false) {
-        p->strand = 2;
-    }
-    if ( p->PARAM_K.wasSet == false) {
-        p->kmerSize = 15;
-    }
+    // if ( p->PARAM_STRAND.wasSet == false) {
+    //     p->strand = 2;
+    // }
+    // if ( p->PARAM_K.wasSet == false) {
+    //     p->kmerSize = 15;
+    // }
     if (  p->PARAM_MAX_SEQ_LEN.wasSet == false) {
         p->maxSeqLen = 10000;
     }
@@ -241,11 +241,11 @@ int search(int argc, const char **argv, const Command& command) {
     }
 
     int searchMode = computeSearchMode(queryDbType, targetDbType, targetSrcDbType, par.searchType);
-    if ((searchMode & Parameters::SEARCH_MODE_FLAG_QUERY_NUCLEOTIDE) && (searchMode & Parameters::SEARCH_MODE_FLAG_TARGET_NUCLEOTIDE)) {
-        setNuclSearchDefaults(&par);
-    } else{
-        par.PARAM_STRAND.addCategory(MMseqsParameter::COMMAND_EXPERT);
-    }
+    // if ((searchMode & Parameters::SEARCH_MODE_FLAG_QUERY_NUCLEOTIDE) && (searchMode & Parameters::SEARCH_MODE_FLAG_TARGET_NUCLEOTIDE)) {
+    setNuclSearchDefaults(&par);
+    // } else{
+    par.PARAM_STRAND.addCategory(MMseqsParameter::COMMAND_EXPERT);
+    // }
     // FIXME: use larger default k-mer size in target-profile case if memory is available
     // overwrite default kmerSize for target-profile searches and parse parameters again
     if (par.exhaustiveSearch == false && (searchMode & Parameters::SEARCH_MODE_FLAG_TARGET_PROFILE) && par.PARAM_K.wasSet == false) {
@@ -573,59 +573,60 @@ int search(int argc, const char **argv, const Command& command) {
         program = std::string(tmpDir + "/blastp.sh");
     }
 
-    if (searchMode & (Parameters::SEARCH_MODE_FLAG_QUERY_TRANSLATED|Parameters::SEARCH_MODE_FLAG_TARGET_TRANSLATED)) {
-        cmd.addVariable("NO_TARGET_INDEX", (indexStr == "") ? "TRUE" : NULL);
-        cmd.addVariable("QUERY_NUCL", (searchMode & Parameters::SEARCH_MODE_FLAG_QUERY_TRANSLATED) ? "TRUE" : NULL);
-        cmd.addVariable("TARGET_NUCL", (searchMode & Parameters::SEARCH_MODE_FLAG_TARGET_TRANSLATED) ? "TRUE" : NULL);
-        cmd.addVariable("THREAD_COMP_PAR", par.createParameterString(par.threadsandcompression).c_str());
-        par.subDbMode = 1;
-        cmd.addVariable("CREATESUBDB_PAR", par.createParameterString(par.createsubdb).c_str());
-        par.translate = 1;
-        cmd.addVariable("OFFSETALIGNMENT_PAR", par.createParameterString(par.offsetalignment).c_str());
-        cmd.addVariable("ORF_SKIP", par.translationMode == Parameters::PARAM_TRANSLATION_MODE_FRAME ? "TRUE" : NULL);
-        if (par.translationMode == Parameters::PARAM_TRANSLATION_MODE_FRAME) {
-            cmd.addVariable("EXTRACT_FRAMES_PAR", par.createParameterString(par.extractframes).c_str());
-        } else {
-            cmd.addVariable("ORF_PAR", par.createParameterString(par.extractorfs).c_str());
-        }
-        cmd.addVariable("SEARCH", program.c_str());
-        program = std::string(tmpDir + "/translated_search.sh");
-        FileUtil::writeFile(program.c_str(), translated_search_sh, translated_search_sh_len);
-    }else if(searchMode & Parameters::SEARCH_MODE_FLAG_QUERY_NUCLEOTIDE &&
-            searchMode & Parameters::SEARCH_MODE_FLAG_TARGET_NUCLEOTIDE){
-        if (par.gpu != 0) {
-            Debug(Debug::ERROR) << "No GPU support in nucleotide search\n";
-            EXIT(EXIT_FAILURE);
-        }
-        FileUtil::writeFile(tmpDir + "/blastn.sh", blastn_sh, blastn_sh_len);
-        //  0: reverse, 1: forward, 2: both
-        switch (par.strand){
-            case 0:
-                par.forwardFrames= "";
-                par.reverseFrames= "1";
-                cmd.addVariable("EXTRACTFRAMES","TRUE");
-                break;
-            case 1:
-                par.forwardFrames= "1";
-                par.reverseFrames= "";
-                break;
-            case 2:
-                par.forwardFrames= "1";
-                par.reverseFrames= "1";
-                cmd.addVariable("EXTRACTFRAMES","TRUE");
-                break;
-        }
-        cmd.addVariable("SPLITSEQUENCE_PAR", par.createParameterString(par.splitsequence).c_str());
-        if(indexStr=="") {
-            cmd.addVariable("NEEDTARGETSPLIT", "TRUE");
-        }
-        cmd.addVariable("NEEDQUERYSPLIT","TRUE");
-        cmd.addVariable("EXTRACT_FRAMES_PAR", par.createParameterString(par.extractframes).c_str());
-        cmd.addVariable("OFFSETALIGNMENT_PAR", par.createParameterString(par.offsetalignment).c_str());
-        cmd.addVariable("SEARCH", program.c_str());
-        program = std::string(tmpDir + "/blastn.sh");
-
+    // if (searchMode & (Parameters::SEARCH_MODE_FLAG_QUERY_TRANSLATED|Parameters::SEARCH_MODE_FLAG_TARGET_TRANSLATED)) {
+    //     cmd.addVariable("NO_TARGET_INDEX", (indexStr == "") ? "TRUE" : NULL);
+    //     cmd.addVariable("QUERY_NUCL", (searchMode & Parameters::SEARCH_MODE_FLAG_QUERY_TRANSLATED) ? "TRUE" : NULL);
+    //     cmd.addVariable("TARGET_NUCL", (searchMode & Parameters::SEARCH_MODE_FLAG_TARGET_TRANSLATED) ? "TRUE" : NULL);
+    //     cmd.addVariable("THREAD_COMP_PAR", par.createParameterString(par.threadsandcompression).c_str());
+    //     par.subDbMode = 1;
+    //     cmd.addVariable("CREATESUBDB_PAR", par.createParameterString(par.createsubdb).c_str());
+    //     par.translate = 1;
+    //     cmd.addVariable("OFFSETALIGNMENT_PAR", par.createParameterString(par.offsetalignment).c_str());
+    //     cmd.addVariable("ORF_SKIP", par.translationMode == Parameters::PARAM_TRANSLATION_MODE_FRAME ? "TRUE" : NULL);
+    //     if (par.translationMode == Parameters::PARAM_TRANSLATION_MODE_FRAME) {
+    //         cmd.addVariable("EXTRACT_FRAMES_PAR", par.createParameterString(par.extractframes).c_str());
+    //     } else {
+    //         cmd.addVariable("ORF_PAR", par.createParameterString(par.extractorfs).c_str());
+    //     }
+    //     cmd.addVariable("SEARCH", program.c_str());
+    //     program = std::string(tmpDir + "/translated_search.sh");
+    //     FileUtil::writeFile(program.c_str(), translated_search_sh, translated_search_sh_len);
+    // }else if(searchMode & Parameters::SEARCH_MODE_FLAG_QUERY_NUCLEOTIDE &&
+    //         searchMode & Parameters::SEARCH_MODE_FLAG_TARGET_NUCLEOTIDE){
+    if (par.gpu != 0) {
+        Debug(Debug::ERROR) << "No GPU support in nucleotide search\n";
+        EXIT(EXIT_FAILURE);
     }
+    FileUtil::writeFile(tmpDir + "/blastdi.sh", blastdi_sh, blastdi_sh_len);
+    // //  0: reverse, 1: forward, 2: both
+    // switch (par.strand){
+    //     case 0:
+    //         par.forwardFrames= "";
+    //         par.reverseFrames= "1";
+    //         cmd.addVariable("EXTRACTQUERYPROFILES","TRUE");
+    //         break;
+    //     case 1:
+    //         par.forwardFrames= "1";
+    //         par.reverseFrames= "";
+    //         break;
+    //     case 2:
+    //         par.forwardFrames= "1";
+    //         par.reverseFrames= "1";
+    //         cmd.addVariable("EXTRACTQUERYPROFILES","TRUE");
+    //         break;
+    // }
+    cmd.addVariable("EXTRACTQUERYPROFILES","TRUE");
+    cmd.addVariable("SPLITSEQUENCE_PAR", par.createParameterString(par.splitsequence).c_str());
+    if(indexStr=="") {
+        cmd.addVariable("NEEDTARGETSPLIT", "TRUE");
+    }
+    cmd.addVariable("NEEDQUERYSPLIT","TRUE");
+    cmd.addVariable("EXTRACT_QUERY_PROFILES_PAR", par.createParameterString(par.extractqueryprofiles).c_str());
+    cmd.addVariable("OFFSETALIGNMENT_PAR", par.createParameterString(par.offsetalignment).c_str());
+    cmd.addVariable("SEARCH", program.c_str());
+    program = std::string(tmpDir + "/blastdi.sh");
+
+    // }
     cmd.execProgram(program.c_str(), par.filenames);
 
     // Should never get here

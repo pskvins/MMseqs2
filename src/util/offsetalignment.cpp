@@ -241,22 +241,22 @@ int offsetalignment(int argc, const char **argv, const Command &command) {
             if(par.searchType == Parameters::SEARCH_TYPE_TRANS_NUCL_ALN){
                 isTransNuclAln = true;
             }
-        }else{
-            if(par.searchType == Parameters::SEARCH_TYPE_AUTO && (targetNucl == true && queryNucl == true )){
-                Debug(Debug::WARNING) << "Assume that nucleotide search was performed\n";
-                Debug(Debug::WARNING) << "If this is not correct than please provide the parameter --search-type 2 (translated) or 3 (nucleotide)\n";
-            } else if(par.searchType == Parameters::SEARCH_TYPE_TRANSLATED){
-                seqtargetNuc = false;
-                isTransNucTransNucSearch = true;
-            } else if(par.searchType == Parameters::SEARCH_TYPE_NUCLEOTIDES){
-                seqtargetNuc = true;
-                isTransNucTransNucSearch = false;
-            } else if(par.searchType == Parameters::SEARCH_TYPE_TRANS_NUCL_ALN){
-                isTransNuclAln = true;
-                seqtargetNuc = false;
-                isTransNucTransNucSearch = true;
-            }
-        }
+        }// else{
+            // if(par.searchType == Parameters::SEARCH_TYPE_AUTO && (targetNucl == true && queryNucl == true )){
+            //     Debug(Debug::WARNING) << "Assume that nucleotide search was performed\n";
+            //     Debug(Debug::WARNING) << "If this is not correct than please provide the parameter --search-type 2 (translated) or 3 (nucleotide)\n";
+            // } else if(par.searchType == Parameters::SEARCH_TYPE_TRANSLATED){
+            //     seqtargetNuc = false;
+            //     isTransNucTransNucSearch = true;
+            // } else if(par.searchType == Parameters::SEARCH_TYPE_NUCLEOTIDES){
+            //     seqtargetNuc = true;
+            //     isTransNucTransNucSearch = false;
+            // } else if(par.searchType == Parameters::SEARCH_TYPE_TRANS_NUCL_ALN){
+            //     isTransNuclAln = true;
+            //     seqtargetNuc = false;
+            //     isTransNucTransNucSearch = true;
+            // }
+        // }
 
         isNuclNuclSearch = (queryNucl && targetNucl && seqtargetNuc);
     }
