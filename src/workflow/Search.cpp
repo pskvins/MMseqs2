@@ -6,7 +6,7 @@
 #include "PrefilteringIndexReader.h"
 #include "searchtargetprofile.sh.h"
 #include "searchslicedtargetprofile.sh.h"
-#include "blastpgp.sh.h"
+#include "blastdigp.sh.h"
 #include "translated_search.sh.h"
 #include "blastp.sh.h"
 #include "blastdi.sh.h"
@@ -478,6 +478,15 @@ int search(int argc, const char **argv, const Command& command) {
         cmd.addVariable("SUBSTRACT_PAR", par.createParameterString(par.subtractdbs).c_str());
         cmd.addVariable("VERBOSITY_PAR", par.createParameterString(par.onlyverbosity).c_str());
 
+        cmd.addVariable("EXTRACTQUERYPROFILES","TRUE");
+        cmd.addVariable("SPLITSEQUENCE_PAR", par.createParameterString(par.splitsequence).c_str());
+        if(indexStr=="") {
+            cmd.addVariable("NEEDTARGETSPLIT", "TRUE");
+        }
+        cmd.addVariable("NEEDQUERYSPLIT","TRUE");
+        cmd.addVariable("EXTRACT_QUERY_PROFILES_PAR", par.createParameterString(par.extractqueryprofiles).c_str());
+        cmd.addVariable("OFFSETALIGNMENT_PAR", par.createParameterString(par.offsetalignment).c_str());
+
         double originalEval = par.evalThr;
         par.evalThr = (par.evalThr < par.evalProfile) ? par.evalThr  : par.evalProfile;
         for (int i = 0; i < par.numIterations; i++) {
@@ -519,8 +528,8 @@ int search(int argc, const char **argv, const Command& command) {
                             par.createParameterString(par.result2profile).c_str());
         }
 
-        FileUtil::writeFile(tmpDir + "/blastpgp.sh", blastpgp_sh, blastpgp_sh_len);
-        program = std::string(tmpDir + "/blastpgp.sh");
+        FileUtil::writeFile(tmpDir + "/blastdigp.sh", blastdigp_sh, blastdigp_sh_len);
+        program = std::string(tmpDir + "/blastdigp.sh");
     } else {
         if (par.sensSteps > 1) {
             if (par.gpu != 0) {
@@ -573,60 +582,24 @@ int search(int argc, const char **argv, const Command& command) {
         program = std::string(tmpDir + "/blastp.sh");
     }
 
-    // if (searchMode & (Parameters::SEARCH_MODE_FLAG_QUERY_TRANSLATED|Parameters::SEARCH_MODE_FLAG_TARGET_TRANSLATED)) {
-    //     cmd.addVariable("NO_TARGET_INDEX", (indexStr == "") ? "TRUE" : NULL);
-    //     cmd.addVariable("QUERY_NUCL", (searchMode & Parameters::SEARCH_MODE_FLAG_QUERY_TRANSLATED) ? "TRUE" : NULL);
-    //     cmd.addVariable("TARGET_NUCL", (searchMode & Parameters::SEARCH_MODE_FLAG_TARGET_TRANSLATED) ? "TRUE" : NULL);
-    //     cmd.addVariable("THREAD_COMP_PAR", par.createParameterString(par.threadsandcompression).c_str());
-    //     par.subDbMode = 1;
-    //     cmd.addVariable("CREATESUBDB_PAR", par.createParameterString(par.createsubdb).c_str());
-    //     par.translate = 1;
-    //     cmd.addVariable("OFFSETALIGNMENT_PAR", par.createParameterString(par.offsetalignment).c_str());
-    //     cmd.addVariable("ORF_SKIP", par.translationMode == Parameters::PARAM_TRANSLATION_MODE_FRAME ? "TRUE" : NULL);
-    //     if (par.translationMode == Parameters::PARAM_TRANSLATION_MODE_FRAME) {
-    //         cmd.addVariable("EXTRACT_FRAMES_PAR", par.createParameterString(par.extractframes).c_str());
-    //     } else {
-    //         cmd.addVariable("ORF_PAR", par.createParameterString(par.extractorfs).c_str());
-    //     }
-    //     cmd.addVariable("SEARCH", program.c_str());
-    //     program = std::string(tmpDir + "/translated_search.sh");
-    //     FileUtil::writeFile(program.c_str(), translated_search_sh, translated_search_sh_len);
-    // }else if(searchMode & Parameters::SEARCH_MODE_FLAG_QUERY_NUCLEOTIDE &&
-    //         searchMode & Parameters::SEARCH_MODE_FLAG_TARGET_NUCLEOTIDE){
-    if (par.gpu != 0) {
-        Debug(Debug::ERROR) << "No GPU support in nucleotide search\n";
-        EXIT(EXIT_FAILURE);
+    // Check if it is running blastdigp.sh
+    if (program.find("blastdigp") == std::string::npos) {
+        // if (par.gpu != 0) {
+        //     Debug(Debug::ERROR) << "No GPU support in nucleotide search\n";
+        //     EXIT(EXIT_FAILURE);
+        // }
+        FileUtil::writeFile(tmpDir + "/blastdi.sh", blastdi_sh, blastdi_sh_len);
+        cmd.addVariable("EXTRACTQUERYPROFILES","TRUE");
+        cmd.addVariable("SPLITSEQUENCE_PAR", par.createParameterString(par.splitsequence).c_str());
+        if(indexStr=="") {
+            cmd.addVariable("NEEDTARGETSPLIT", "TRUE");
+        }
+        cmd.addVariable("NEEDQUERYSPLIT","TRUE");
+        cmd.addVariable("EXTRACT_QUERY_PROFILES_PAR", par.createParameterString(par.extractqueryprofiles).c_str());
+        cmd.addVariable("OFFSETALIGNMENT_PAR", par.createParameterString(par.offsetalignment).c_str());
+        cmd.addVariable("SEARCH", program.c_str());
+        program = std::string(tmpDir + "/blastdi.sh");
     }
-    FileUtil::writeFile(tmpDir + "/blastdi.sh", blastdi_sh, blastdi_sh_len);
-    // //  0: reverse, 1: forward, 2: both
-    // switch (par.strand){
-    //     case 0:
-    //         par.forwardFrames= "";
-    //         par.reverseFrames= "1";
-    //         cmd.addVariable("EXTRACTQUERYPROFILES","TRUE");
-    //         break;
-    //     case 1:
-    //         par.forwardFrames= "1";
-    //         par.reverseFrames= "";
-    //         break;
-    //     case 2:
-    //         par.forwardFrames= "1";
-    //         par.reverseFrames= "1";
-    //         cmd.addVariable("EXTRACTQUERYPROFILES","TRUE");
-    //         break;
-    // }
-    cmd.addVariable("EXTRACTQUERYPROFILES","TRUE");
-    cmd.addVariable("SPLITSEQUENCE_PAR", par.createParameterString(par.splitsequence).c_str());
-    if(indexStr=="") {
-        cmd.addVariable("NEEDTARGETSPLIT", "TRUE");
-    }
-    cmd.addVariable("NEEDQUERYSPLIT","TRUE");
-    cmd.addVariable("EXTRACT_QUERY_PROFILES_PAR", par.createParameterString(par.extractqueryprofiles).c_str());
-    cmd.addVariable("OFFSETALIGNMENT_PAR", par.createParameterString(par.offsetalignment).c_str());
-    cmd.addVariable("SEARCH", program.c_str());
-    program = std::string(tmpDir + "/blastdi.sh");
-
-    // }
     cmd.execProgram(program.c_str(), par.filenames);
 
     // Should never get here

@@ -22,6 +22,7 @@ set(GENERATED_WORKFLOWS
         workflow/enrich.sh
         workflow/blastn.sh
 	workflow/blastdi.sh
+        workflow/blastdigp.sh
         workflow/searchslicedtargetprofile.sh
         workflow/taxonomy.sh
         workflow/linsearch.sh

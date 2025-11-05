@@ -18,7 +18,7 @@ public:
     struct Profile{
         char * pssm;
         float * prob;
-        const float * neffM;
+        float * neffM;
 #ifdef GAP_POS_SCORING
         const uint8_t *gDel;
         const uint8_t *gIns;
