@@ -37,12 +37,12 @@ int extractqueryprofiles(int argc, const char **argv, const Command& command) {
     Parameters& par = Parameters::getInstance();
     par.parseParameters(argc, argv, command, true, 0, 0);
 
-    DBReader<unsigned int> *reader = new DBReader<unsigned int>(par.db1.c_str(), par.db1Index.c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
-    reader->open(DBReader<unsigned int>::NOSORT);
+    DBReader<unsigned int> reader(par.db1.c_str(), par.db1Index.c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
+    reader.open(DBReader<unsigned int>::NOSORT);
 
-    const int inputDbtype = reader->getDbtype();
+    const int inputDbtype = reader.getDbtype();
 
-    unsigned int maxSeqLength = reader->getMaxSeqLen();
+    unsigned int maxSeqLength = reader.getMaxSeqLen();
     // for SIMD memory alignment
     maxSeqLength = (maxSeqLength) / (VECSIZE_INT * 4) + 2;
     maxSeqLength *= (VECSIZE_INT * 4);
@@ -59,7 +59,7 @@ int extractqueryprofiles(int argc, const char **argv, const Command& command) {
 
     SubstitutionMatrix subMat(par.scoringMatrixFile.values.aminoacid().c_str(), 2.0, -0.2f);
 
-    Debug::Progress progress(reader->getSize());
+    Debug::Progress progress(reader.getSize());
 #pragma omp parallel
     {
         int thread_idx = 0;
@@ -69,16 +69,12 @@ int extractqueryprofiles(int argc, const char **argv, const Command& command) {
         Sequence seq(maxSeqLength + 1, inputDbtype, &subMat, 0, false, par.compBiasCorrection != 0);
         size_t querySize = 0;
         size_t queryFrom = 0;
-        reader->decomposeDomainByAminoAcid(thread_idx, par.threads, &queryFrom, &querySize);
+        reader.decomposeDomainByAminoAcid(thread_idx, par.threads, &queryFrom, &querySize);
         if (querySize == 0) {
             queryFrom = 0;
         }
 
         size_t aaBufferSize = par.maxSeqLen + 3 + 1;
-        char* aa = NULL;
-        if (par.translate == true) {
-            aa = (char*)malloc(aaBufferSize * sizeof(char));
-        }
         char* msaContent = (char*) mem_align(ALIGN_INT, sizeof(char) * (maxSeqLength + 1) * 1);
         char** msaSequences = (char**) mem_align(ALIGN_INT, sizeof(char*) * 1);
         msaSequences[0] = msaContent;
@@ -100,9 +96,9 @@ int extractqueryprofiles(int argc, const char **argv, const Command& command) {
         for (unsigned int i = queryFrom; i < (queryFrom + querySize); ++i){
             progress.updateProgress();
 
-            unsigned int key = reader->getDbKey(i);
-            const char* data = reader->getData(i, thread_idx);
-            size_t seqLen = reader->getSeqLen(i);
+            unsigned int key = reader.getDbKey(i);
+            const char* data = reader.getData(i, thread_idx);
+            size_t seqLen = reader.getSeqLen(i);
 
             seq.mapSequence(i, key, data, seqLen);
 
@@ -203,9 +199,6 @@ int extractqueryprofiles(int argc, const char **argv, const Command& command) {
                 result.clear();
             }
         }
-        if (aa != NULL) {
-            free(aa);
-        }
         delete[] profile;
         free(msaSequences);
         free(msaContent);
@@ -214,9 +207,7 @@ int extractqueryprofiles(int argc, const char **argv, const Command& command) {
     }
     headerWriter.close(true);
     sequenceWriter.close(true);
-    reader->close();
-    delete reader;
-    return EXIT_SUCCESS;
+    reader.close();
 
 
     // make identifiers stable
