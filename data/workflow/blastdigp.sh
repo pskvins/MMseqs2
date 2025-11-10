@@ -47,6 +47,7 @@ notExists() {
 [ ! -d "$4" ] && echo "tmp directory $4 not found!" && mkdir -p "$4";
 
 QUERYDB="$1"
+ORIQUERYDB="$1"
 TARGETDB="$2"
 TMP_PATH="$4"
 OFFSET_INPUT=""
@@ -129,9 +130,13 @@ while [ "$STEP" -lt "$NUM_IT" ]; do
         if notExists "$TMP_PATH/pref_$STEP.done"; then
             STEPONE=$((STEP-1))
             # shellcheck disable=SC2086
-            "$MMSEQS" subtractdbs "$TMP_PATH/pref_tmp_$STEP" "$TMP_PATH/aln_$STEPONE" "$TMP_PATH/pref_$STEP" $SUBSTRACT_PAR \
+            "$MMSEQS" subtractdbs "$TMP_PATH/pref_tmp_$STEP" "$OFFSET_INPUT" "$TMP_PATH/pref_$STEP" $SUBSTRACT_PAR \
                 || fail "Substract died"
+            # # shellcheck disable=SC2086
+            # "$MMSEQS" subtractdbs "$TMP_PATH/pref_tmp_$STEP" "$TMP_PATH/aln_$STEPONE" "$TMP_PATH/pref_$STEP" $SUBSTRACT_PAR \
+            #     || fail "Substract died"
             "$MMSEQS" rmdb "$TMP_PATH/pref_tmp_$STEP"
+            "$MMSEQS" rmdb "$OFFSET_INPUT"
         fi
         touch "$TMP_PATH/pref_$STEP.done"
     fi
@@ -142,28 +147,41 @@ while [ "$STEP" -lt "$NUM_IT" ]; do
         eval TMP="\$$PARAM"
 
         if [ "$STEP" -eq 0 ]; then
-            OFFSET_INPUT="$TMP_PATH/aln_$STEP"
+            OFFSET_INPUT="$TMP_PATH/aln_double_$STEP"
             # shellcheck disable=SC2086
-            $RUNNER "$MMSEQS" "${ALIGN_MODULE}" "$QUERYDB" "$TARGETDB" "$TMP_PATH/pref_$STEP" "$TMP_PATH/aln_$STEP" ${TMP} \
+            $RUNNER "$MMSEQS" "${ALIGN_MODULE}" "$QUERYDB" "$TARGETDB" "$TMP_PATH/pref_$STEP" "$TMP_PATH/aln_double_$STEP" ${TMP} \
                 || fail "Alignment died"
         else
+            OFFSET_INPUT="$TMP_PATH/aln_tmp_double_$STEP"
             # shellcheck disable=SC2086
-            $RUNNER "$MMSEQS" "${ALIGN_MODULE}" "$QUERYDB" "$TARGETDB" "$TMP_PATH/pref_$STEP" "$TMP_PATH/aln_tmp_$STEP" ${TMP} \
+            $RUNNER "$MMSEQS" "${ALIGN_MODULE}" "$QUERYDB" "$TARGETDB" "$TMP_PATH/pref_$STEP" "$TMP_PATH/aln_tmp_double_$STEP" ${TMP} \
                 || fail "Alignment died"
         fi
         touch "$TMP_PATH/aln_tmp_$STEP.done"
+    fi
+
+    # offset alignment
+    if notExists "$TMP_PATH/aln_offset_$STEP.done"; then
+        # shellcheck disable=SC2086
+        "$MMSEQS" offsetalignment "$ORIQUERYDB" "$QUERYDB" "$2" "$TARGETDB" "$OFFSET_INPUT" "$TMP_PATH/aln_offset_$STEP" ${OFFSETALIGNMENT_PAR} \
+            || fail "Offset step died"
+        # replace alignment with offset alignment
+        if [ "$STEP" -eq 0 ]; then
+            "$MMSEQS" mvdb "$TMP_PATH/aln_offset_$STEP" "$TMP_PATH/aln_$STEP"
+        else
+            "$MMSEQS" mvdb "$TMP_PATH/aln_offset_$STEP" "$TMP_PATH/aln_tmp_$STEP"
+        fi
+        touch "$TMP_PATH/aln_offset_$STEP.done"
     fi
 
     if [ "$STEP" -gt 0 ]; then
         if notExists "$TMP_PATH/aln_$STEP.done"; then
             STEPONE=$((STEP-1))
             if [ "$STEP" -ne "$((NUM_IT  - 1))" ]; then
-                OFFSET_INPUT="$TMP_PATH/aln_$STEP"
-                "$MMSEQS" mergedbs "$QUERYDB" "$TMP_PATH/aln_$STEP" "$TMP_PATH/aln_$STEPONE" "$TMP_PATH/aln_tmp_$STEP" \
+                "$MMSEQS" mergedbs "$ORIQUERYDB" "$TMP_PATH/aln_$STEP" "$TMP_PATH/aln_$STEPONE" "$TMP_PATH/aln_tmp_$STEP" \
                     || fail "Alignment died"
             else
-                OFFSET_INPUT="$3"
-                "$MMSEQS" mergedbs "$QUERYDB" "$3" "$TMP_PATH/aln_$STEPONE" "$TMP_PATH/aln_tmp_$STEP" \
+                "$MMSEQS" mergedbs "$ORIQUERYDB" "$3" "$TMP_PATH/aln_$STEPONE" "$TMP_PATH/aln_tmp_$STEP" \
                     || fail "Alignment died"
             fi
             "$MMSEQS" rmdb "$TMP_PATH/aln_$STEPONE"
@@ -172,28 +190,18 @@ while [ "$STEP" -lt "$NUM_IT" ]; do
         fi
     fi
 
-    # offset alignment
-    if notExists "$TMP_PATH/aln_offset_$STEP.done"; then
-        # shellcheck disable=SC2086
-        "$MMSEQS" offsetalignment "$1" "$QUERYDB" "$2" "$TARGETDB" "$OFFSET_INPUT" "$TMP_PATH/aln_offset_$STEP" ${OFFSETALIGNMENT_PAR} \
-            || fail "Offset step died"
-        # replace alignment with offset alignment
-        "$MMSEQS" rmdb "$OFFSET_INPUT"
-        "$MMSEQS" mvdb "$TMP_PATH/aln_offset_$STEP" "$OFFSET_INPUT"
-        touch "$TMP_PATH/aln_offset_$STEP.done"
-    fi
-
 # create profiles
     if [ "$STEP" -ne "$((NUM_IT  - 1))" ]; then
         if notExists "$TMP_PATH/profile_$STEP.dbtype"; then
             PARAM="PROFILE_PAR_$STEP"
             eval TMP="\$$PARAM"
             # shellcheck disable=SC2086
-            $RUNNER "$MMSEQS" result2profile "$1" "$TARGETDB" "$TMP_PATH/aln_$STEP" "$TMP_PATH/profile_$STEP" ${TMP} \
+            $RUNNER "$MMSEQS" result2profile "$ORIQUERYDB" "$TARGETDB" "$TMP_PATH/aln_$STEP" "$TMP_PATH/profile_$STEP" ${TMP} \
                 || fail "Create profile died"
         fi
-	    QUERYDB="$TMP_PATH/profile_$STEP"
     fi
+    ORIQUERYDB="$TMP_PATH/profile_$STEP"
+    QUERYDB="$TMP_PATH/profile_$STEP"
 	STEP=$((STEP+1))
 done
 

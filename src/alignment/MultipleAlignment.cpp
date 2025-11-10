@@ -47,9 +47,16 @@ void MultipleAlignment::computeQueryGaps(unsigned int *queryGaps, Sequence *cent
     memset(queryGaps, 0, sizeof(unsigned int) * centerSeq->L);
     for(size_t i = 0; i < alignmentResults.size(); i++) {
         const Matcher::result_t& alignment = alignmentResults[i];
-        const std::string& bt = alignment.backtrace;
+        std::string bt = alignment.backtrace;
         size_t currentQueryGapSize = 0;
         size_t queryPos = alignment.qStartPos;
+        size_t queryEndPos = alignment.qEndPos;
+        if (queryPos > queryEndPos){
+            // swap start and end position of query and db
+            std::swap(queryPos, queryEndPos);
+            // flip backtrace
+            std::reverse(bt.begin(), bt.end());
+        }
         // size_t targetPos = alignment.dbStartPos;
         // compute query gaps (deletions)
         for (size_t pos = 0; pos < bt.size(); ++pos) {
@@ -145,7 +152,7 @@ void MultipleAlignment::updateGapsInSequenceSet(char **msaSequence, size_t cente
                 if(bt.at(alnPos) == 'D'){
                     while (alnPos < bt.size() && bt.at(alnPos) == 'D') {
                         if(noDeletionMSA == false) {
-                            unsigned char letter = (reverse == true) ? Orf::complement(subMat->num2aa[edgeSeq[targetPos]]) :
+                            unsigned char letter = (reverse == true) ? subMat->num2aa[subMat->revcomp[edgeSeq[targetPos]]] :
                                                                         subMat->num2aa[edgeSeq[targetPos]];
                             edgeSeqMSA[bufferPos] = letter;
                             bufferPos++;
@@ -160,7 +167,7 @@ void MultipleAlignment::updateGapsInSequenceSet(char **msaSequence, size_t cente
                         bufferPos++;
                         queryPos++;
                     } else if(bt.at(alnPos) == 'M'){
-                        unsigned char letter = (reverse == true) ? Orf::complement(subMat->num2aa[edgeSeq[targetPos]]) :
+                        unsigned char letter = (reverse == true) ? subMat->num2aa[subMat->revcomp[edgeSeq[targetPos]]] :
                                                 subMat->num2aa[edgeSeq[targetPos]];
                         edgeSeqMSA[bufferPos] = letter;
                         bufferPos++;
@@ -178,7 +185,7 @@ void MultipleAlignment::updateGapsInSequenceSet(char **msaSequence, size_t cente
                         }
                     }
                     // M state
-                    unsigned char letter = (reverse == true) ? Orf::complement(subMat->num2aa[edgeSeq[targetPos]]) :
+                    unsigned char letter = (reverse == true) ? subMat->num2aa[subMat->revcomp[edgeSeq[targetPos]]] :
                                            subMat->num2aa[edgeSeq[targetPos]];
                     edgeSeqMSA[bufferPos] = letter;
 

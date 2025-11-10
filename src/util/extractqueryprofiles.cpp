@@ -74,7 +74,6 @@ int extractqueryprofiles(int argc, const char **argv, const Command& command) {
             queryFrom = 0;
         }
 
-        size_t aaBufferSize = par.maxSeqLen + 3 + 1;
         char* msaContent = (char*) mem_align(ALIGN_INT, sizeof(char) * (maxSeqLength + 1) * 1);
         char** msaSequences = (char**) mem_align(ALIGN_INT, sizeof(char*) * 1);
         msaSequences[0] = msaContent;
