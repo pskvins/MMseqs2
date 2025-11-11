@@ -20,16 +20,18 @@
 #include <omp.h>
 #endif
 
-void toBuffer(const char* pssm, const unsigned char* sequence, const unsigned char* consensus, const float* neffM, size_t seqLen, BaseMatrix& subMat, std::string& result) {
+void toBuffer(const char* pssm, const unsigned char* sequence, const unsigned char* consensus, const float* neffM, size_t seqLen, std::string& result) {
+    size_t currPos = 0;
     for (size_t pos = 0; pos < seqLen; pos++) {
         for (size_t aa = 0; aa < Sequence::PROFILE_AA_SIZE; aa++) {
-            result.push_back(pssm[pos * Sequence::PROFILE_AA_SIZE + aa]);
+            result.push_back(pssm[currPos + aa]);
         }
         result.push_back(static_cast<unsigned char>(sequence[pos]));
-        result.push_back(static_cast<unsigned char>(subMat.aa2num[static_cast<int>(consensus[pos])]));
+        result.push_back(static_cast<unsigned char>(consensus[pos]));
         result.push_back(static_cast<unsigned char>(MathUtil::convertNeffToChar(neffM[pos])));
         result.push_back(static_cast<unsigned char>(0));
         result.push_back(static_cast<unsigned char>(0));
+        currPos += Sequence::PROFILE_READIN_SIZE;
     }
 }
 
@@ -90,7 +92,7 @@ int extractqueryprofiles(int argc, const char **argv, const Command& command) {
         );
 
         float *pNullBuffer = new float[maxSeqLength + 1];
-        char* data_cpy = (char*)malloc(sizeof(char) * maxSeqLength * Sequence::PROFILE_AA_SIZE);
+        char* data_cpy = (char*)malloc(sizeof(char) * maxSeqLength * Sequence::PROFILE_READIN_SIZE);
         
         for (unsigned int i = queryFrom; i < (queryFrom + querySize); ++i){
             progress.updateProgress();
@@ -103,9 +105,9 @@ int extractqueryprofiles(int argc, const char **argv, const Command& command) {
 
             if (Parameters::isEqualDbtype(inputDbtype, Parameters::DBTYPE_HMM_PROFILE)) {
                 // Copy the data
-                memcpy(data_cpy, data, sizeof(char) * seqLen * Sequence::PROFILE_AA_SIZE);
+                memcpy(data_cpy, data, sizeof(char) * seqLen * Sequence::PROFILE_READIN_SIZE);
                 // Nothing to do for the forward strand
-                toBuffer(data_cpy, seq.numSequence, seq.numConsensusSequence, seq.neffM, seqLen, subMat, result);
+                toBuffer(data_cpy, seq.numSequence, seq.numConsensusSequence, seq.neffM, seqLen, result);
                 sequenceWriter.writeData(result.c_str(), result.length(), key, thread_idx);
                 result.clear();
 
@@ -117,26 +119,30 @@ int extractqueryprofiles(int argc, const char **argv, const Command& command) {
                 std::reverse(seq.numSequence, seq.numSequence + seqLen);
                 std::reverse(seq.numConsensusSequence, seq.numConsensusSequence + seqLen);
                 std::reverse(seq.neffM, seq.neffM + seqLen);
-                char tmpPssm[Sequence::PROFILE_AA_SIZE];
+                char tmpPssm[Sequence::PROFILE_READIN_SIZE];
                 int i_curr = 0;
-                int j_curr = (seqLen - 1) * Sequence::PROFILE_AA_SIZE;
+                int j_curr = (seqLen - 1) * Sequence::PROFILE_READIN_SIZE;
                 for (size_t pos = 0; pos < seqLen/2; pos++) {
-                    memcpy(&tmpPssm[0], data_cpy + i_curr, Sequence::PROFILE_AA_SIZE * sizeof(char));
-                    memcpy(data_cpy + i_curr, data_cpy + j_curr, Sequence::PROFILE_AA_SIZE * sizeof(char));
-                    memcpy(data_cpy + j_curr, &tmpPssm[0], Sequence::PROFILE_AA_SIZE * sizeof(char));
-                    i_curr += Sequence::PROFILE_AA_SIZE;
-                    j_curr -= Sequence::PROFILE_AA_SIZE;
+                    memcpy(&tmpPssm[0], data_cpy + i_curr, Sequence::PROFILE_READIN_SIZE * sizeof(char));
+                    memcpy(data_cpy + i_curr, data_cpy + j_curr, Sequence::PROFILE_READIN_SIZE * sizeof(char));
+                    memcpy(data_cpy + j_curr, &tmpPssm[0], Sequence::PROFILE_READIN_SIZE * sizeof(char));
+                    i_curr += Sequence::PROFILE_READIN_SIZE;
+                    j_curr -= Sequence::PROFILE_READIN_SIZE;
                 }
-                for (size_t pos = 0; pos < seqLen; pos++) {
+                size_t currPos = 0, l = 0;
+                // for (size_t pos = 0; pos < seqLen; pos++) {
+                while (l < seqLen && l < maxSeqLength) {
                     // Swap following position pairs: (1,15), (2,6), (4,12), (5,7), (8,9), (10,11)
-                    std::swap(data_cpy[pos * Sequence::PROFILE_AA_SIZE + 1], data_cpy[pos * Sequence::PROFILE_AA_SIZE + 15]);
-                    std::swap(data_cpy[pos * Sequence::PROFILE_AA_SIZE + 2], data_cpy[pos * Sequence::PROFILE_AA_SIZE + 6]);
-                    std::swap(data_cpy[pos * Sequence::PROFILE_AA_SIZE + 4], data_cpy[pos * Sequence::PROFILE_AA_SIZE + 12]);
-                    std::swap(data_cpy[pos * Sequence::PROFILE_AA_SIZE + 5], data_cpy[pos * Sequence::PROFILE_AA_SIZE + 7]);
-                    std::swap(data_cpy[pos * Sequence::PROFILE_AA_SIZE + 8], data_cpy[pos * Sequence::PROFILE_AA_SIZE + 9]);
-                    std::swap(data_cpy[pos * Sequence::PROFILE_AA_SIZE + 10], data_cpy[pos * Sequence::PROFILE_AA_SIZE + 11]);
+                    std::swap(data_cpy[currPos + 1], data_cpy[currPos + 15]);
+                    std::swap(data_cpy[currPos + 2], data_cpy[currPos + 6]);
+                    std::swap(data_cpy[currPos + 4], data_cpy[currPos + 12]);
+                    std::swap(data_cpy[currPos + 5], data_cpy[currPos + 7]);
+                    std::swap(data_cpy[currPos + 8], data_cpy[currPos + 9]);
+                    std::swap(data_cpy[currPos + 10], data_cpy[currPos + 11]);
+                    currPos += Sequence::PROFILE_READIN_SIZE;
+                    l++;
                 }
-                toBuffer(data_cpy, seq.numSequence, seq.numConsensusSequence, seq.neffM, seqLen, subMat, result);
+                toBuffer(data_cpy, seq.numSequence, seq.numConsensusSequence, seq.neffM, seqLen, result);
                 sequenceWriter.writeData(result.c_str(), result.length(), key, thread_idx);
                 
                 bufferLen = Orf::writeOrfHeader(buffer, key, seqLen - 1, static_cast<size_t>(0), 0, 0);

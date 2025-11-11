@@ -403,6 +403,7 @@ Orf::SequenceLocation Orf::parseOrfHeader(const char *data) {
     Orf::SequenceLocation loc;
     if(found == false){
         loc.id = UINT_MAX;
+        loc.strand = Orf::STRAND_PLUS;
         return loc;
     }
 
