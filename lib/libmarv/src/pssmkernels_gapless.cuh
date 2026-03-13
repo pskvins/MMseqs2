@@ -416,6 +416,13 @@ namespace hardcodedzero{
                 int deviceId;
                 cudaGetDevice(&deviceId); CUERR;
                 if(!isSet[deviceId]){
+                    int maxSmem = 0;
+                    cudaDeviceGetAttribute(&maxSmem, cudaDevAttrMaxSharedMemoryPerBlockOptin, deviceId); CUERR;
+                    if(smem > maxSmem){
+                        throw std::runtime_error("Requested shared memory (" + std::to_string(smem) + 
+                            " bytes) exceeds device maximum (" + std::to_string(maxSmem) + 
+                            " bytes). Query length may be too long for this GPU.");
+                    }
                     cudaFuncSetAttribute(kernel, cudaFuncAttributeMaxDynamicSharedMemorySize, smem); CUERR;
                     isSet[deviceId] = true;
                 }
@@ -966,6 +973,13 @@ namespace hardcodedzero{
                 int deviceId;
                 cudaGetDevice(&deviceId); CUERR;
                 if(!isSet[deviceId]){
+                    int maxSmem = 0;
+                    cudaDeviceGetAttribute(&maxSmem, cudaDevAttrMaxSharedMemoryPerBlockOptin, deviceId); CUERR;
+                    if(smem > maxSmem){
+                        throw std::runtime_error("Requested shared memory (" + std::to_string(smem) + 
+                            " bytes) exceeds device maximum (" + std::to_string(maxSmem) + 
+                            " bytes). Query length may be too long for this GPU.");
+                    }
                     cudaFuncSetAttribute(kernel, cudaFuncAttributeMaxDynamicSharedMemorySize, smem); CUERR;
                     isSet[deviceId] = true;
                 }
@@ -1497,6 +1511,13 @@ namespace kernelparamzero{
                 int deviceId;
                 cudaGetDevice(&deviceId); CUERR;
                 if(!isSet[deviceId]){
+                    int maxSmem = 0;
+                    cudaDeviceGetAttribute(&maxSmem, cudaDevAttrMaxSharedMemoryPerBlockOptin, deviceId); CUERR;
+                    if(smem > maxSmem){
+                        throw std::runtime_error("Requested shared memory (" + std::to_string(smem) + 
+                            " bytes) exceeds device maximum (" + std::to_string(maxSmem) + 
+                            " bytes). Query length may be too long for this GPU.");
+                    }
                     cudaFuncSetAttribute(kernel, cudaFuncAttributeMaxDynamicSharedMemorySize, smem); CUERR;
                     isSet[deviceId] = true;
                 }
@@ -2049,6 +2070,13 @@ namespace kernelparamzero{
                 int deviceId;
                 cudaGetDevice(&deviceId); CUERR;
                 if(!isSet[deviceId]){
+                    int maxSmem = 0;
+                    cudaDeviceGetAttribute(&maxSmem, cudaDevAttrMaxSharedMemoryPerBlockOptin, deviceId); CUERR;
+                    if(smem > maxSmem){
+                        throw std::runtime_error("Requested shared memory (" + std::to_string(smem) + 
+                            " bytes) exceeds device maximum (" + std::to_string(maxSmem) + 
+                            " bytes). Query length may be too long for this GPU.");
+                    }
                     cudaFuncSetAttribute(kernel, cudaFuncAttributeMaxDynamicSharedMemorySize, smem); CUERR;
                     isSet[deviceId] = true;
                 }

@@ -286,6 +286,8 @@ namespace cudasw4{
         using MyPinnedBuffer = helpers::SimpleAllocationPinnedHost<T, 0>;
         template<class T>
         using MyDeviceBuffer = helpers::SimpleAllocationDevice<T, 0>;
+        template<class T>
+        using MyManagedBuffer = helpers::SimpleAllocationManaged<T, 0>;
 
         struct GpuWorkingSet{
 
@@ -604,13 +606,21 @@ namespace cudasw4{
             }
 
             void resetTopNArrays(cudaStream_t stream){
+                // Reset both main and tmp arrays to ensure no stale data persists between scans
                 thrust::fill(thrust::cuda::par_nosync.on(stream),
                     d_topN_scores.data(),
                     d_topN_scores.data() + d_topN_scores.size(),
                     -1.f
                 );
+                thrust::fill(thrust::cuda::par_nosync.on(stream),
+                    d_topN_scores_tmp.data(),
+                    d_topN_scores_tmp.data() + d_topN_scores_tmp.size(),
+                    -1.f
+                );
                 cudaMemsetAsync(d_topN_refIds.data(), 0, sizeof(ReferenceIdT) * d_topN_refIds.size(), stream); CUERR;
+                cudaMemsetAsync(d_topN_refIds_tmp.data(), 0, sizeof(ReferenceIdT) * d_topN_refIds_tmp.size(), stream); CUERR;
                 cudaMemsetAsync(d_topN_alignmentEndPositions.data(), 0, sizeof(AlignmentEndPosition) * d_topN_alignmentEndPositions.size(), stream); CUERR;
+                cudaMemsetAsync(d_topN_alignmentEndPositions_tmp.data(), 0, sizeof(AlignmentEndPosition) * d_topN_alignmentEndPositions_tmp.size(), stream); CUERR;
             }
         
             void setPartitionOffsets(const HostGpuPartitionOffsets& offsets){
@@ -2135,6 +2145,13 @@ namespace cudasw4{
             // );  CUERR
 
             cudaStreamSynchronize(masterStream1); CUERR;
+            
+            // Ensure all GPU streams are synchronized before returning to prevent race conditions with next query
+            for(int gpu = 0; gpu < numGpus; gpu++){
+                cudaSetDevice(deviceIds[gpu]); CUERR;
+                cudaStreamSynchronize(gpuStreams[gpu]); CUERR;
+            }
+            cudaSetDevice(masterDeviceId); CUERR;
 
             if(targetSubjectIds){
                 //h_finalReferenceIds will contain numbers from 0 to num target subject ids. convert to proper target subject ids
@@ -2338,6 +2355,13 @@ namespace cudasw4{
             // );  CUERR
 
             cudaStreamSynchronize(masterStream1); CUERR;
+            
+            // Ensure all GPU streams are synchronized before returning to prevent race conditions with next query
+            for(int gpu = 0; gpu < numGpus; gpu++){
+                cudaSetDevice(deviceIds[gpu]); CUERR;
+                cudaStreamSynchronize(gpuStreams[gpu]); CUERR;
+            }
+            cudaSetDevice(masterDeviceId); CUERR;
 
             if(targetSubjectIds){
                 //h_finalReferenceIds will contain numbers from 0 to num target subject ids. convert to proper target subject ids
@@ -2366,6 +2390,17 @@ namespace cudasw4{
             
             size_t totalNumberOfProcessedSequences = 0;
         
+            // Synchronize all streams before starting a new query to ensure previous async operations are complete
+            for(int gpu = 0; gpu < numGpus; gpu++){
+                cudaSetDevice(deviceIds[gpu]); CUERR;
+                auto& ws = *workingSets[gpu];
+                cudaStreamSynchronize(gpuStreams[gpu]); CUERR;
+                cudaStreamSynchronize(ws.workStreamForTempUsage); CUERR;
+                for(auto& stream : ws.workStreamsWithoutTemp){
+                    cudaStreamSynchronize(stream); CUERR;
+                }
+            }
+
             for(int gpu = 0; gpu < numGpus; gpu++){
                 cudaSetDevice(deviceIds[gpu]); CUERR;
                 auto& ws = *workingSets[gpu];
@@ -2374,6 +2409,9 @@ namespace cudasw4{
                 
                 ws.resetMaxReduceArray(gpuStreams[gpu]);
                 ws.resetTopNArrays(gpuStreams[gpu]);
+                
+                // Reset copy buffer index to ensure consistent buffer state for each scan
+                ws.copyBufferIndex = 0;
         
                 //create dependency on mainStream
                 cudaEventRecord(ws.forkStreamEvent, gpuStreams[gpu]); CUERR;
@@ -2946,10 +2984,22 @@ namespace cudasw4{
             //todo: for proper multi-gpu we need to find the correct gpu for each target subject to re-use the cached data
             //for now, multi-gpu will always gather the data on the host and transfer it to gpu 0
             
+            // Synchronize all streams before starting a new query to ensure previous async operations are complete
+            for(int gpu = 0; gpu < numGpus; gpu++){
+                cudaSetDevice(deviceIds[gpu]); CUERR;
+                auto& ws = *workingSets[gpu];
+                cudaStreamSynchronize(gpuStreams[gpu]); CUERR;
+                cudaStreamSynchronize(ws.workStreamForTempUsage); CUERR;
+                for(auto& stream : ws.workStreamsWithoutTemp){
+                    cudaStreamSynchronize(stream); CUERR;
+                }
+            }
+
             prefetchDBToGpus();
             cudaSetDevice(deviceIds[0]); CUERR;
             workingSets[0]->resetMaxReduceArray(gpuStreams[0]);
             workingSets[0]->resetTopNArrays(gpuStreams[0]);
+            workingSets[0]->copyBufferIndex = 0;  // Reset for consistent buffer state
             const size_t numCachedSubjects = workingSets[0]->d_cacheddb->getNumSubjects();
             auto cachedTargetSubjectIdsEnd = targetSubjectIds->begin();
             
@@ -4365,9 +4415,9 @@ namespace cudasw4{
         MyPinnedBuffer<AlignmentEndPosition> h_finalEndPositions;
         
         //MyPinnedBuffer<int> resultNumOverflows;
-        MyDeviceBuffer<float> d_finalAlignmentScores_allGpus;
-        MyDeviceBuffer<ReferenceIdT> d_finalReferenceIds_allGpus;
-        MyDeviceBuffer<AlignmentEndPosition> d_finalEndPositions_allGpus;
+        MyManagedBuffer<float> d_finalAlignmentScores_allGpus;
+        MyManagedBuffer<ReferenceIdT> d_finalReferenceIds_allGpus;
+        MyManagedBuffer<AlignmentEndPosition> d_finalEndPositions_allGpus;
         //MyDeviceBuffer<int> d_resultNumOverflows;
         std::unique_ptr<helpers::GpuTimer> scanTimer;
 

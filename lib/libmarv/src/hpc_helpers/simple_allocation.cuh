@@ -11,7 +11,7 @@
 
     namespace helpers {
 
-    enum class DataLocation {Host, PinnedHost, Device};
+    enum class DataLocation {Host, PinnedHost, Device, Managed};
 
     template<DataLocation location, class T>
     struct SimpleAllocator;
@@ -63,6 +63,29 @@
                 std::cerr << "SimpleAllocator: Failed to allocate " << (elements) << " * " << sizeof(T)
                             << " = " << (elements * sizeof(T))
                             << " bytes using cudaMalloc!\n";
+
+                throw std::bad_alloc();
+            }
+
+            assert(ptr != nullptr);
+
+            return ptr;
+        }
+
+        void deallocate(T* ptr){
+            cudaFree(ptr); CUERR;
+        }
+    };
+
+    template<class T>
+    struct SimpleAllocator<DataLocation::Managed, T>{
+        T* allocate(size_t elements){
+            T* ptr;
+            cudaError_t err = cudaMallocManaged(&ptr, elements * sizeof(T), cudaMemAttachGlobal);
+            if(err != cudaSuccess){
+                std::cerr << "SimpleAllocator: Failed to allocate " << (elements) << " * " << sizeof(T)
+                            << " = " << (elements * sizeof(T))
+                            << " bytes using cudaMallocManaged!\n";
 
                 throw std::bad_alloc();
             }
@@ -272,6 +295,9 @@
 
     template<class T, int overprovisioningPercent = 10>
     using SimpleAllocationDevice = SimpleAllocation<DataLocation::Device, T, overprovisioningPercent>;
+
+    template<class T, int overprovisioningPercent = 10>
+    using SimpleAllocationManaged = SimpleAllocation<DataLocation::Managed, T, overprovisioningPercent>;
 
     } // namespace helpers
 
