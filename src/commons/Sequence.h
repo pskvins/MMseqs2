@@ -490,7 +490,7 @@ public:
     // static const size_t PROFILE_GAP_RESERVED1 = 23;
     // static const size_t PROFILE_GAP_RESERVED2 = 24;
     // 20 AA, 1 query, 1 consensus, 1 Neff M, 2 gap penalties
-    static const size_t PROFILE_READIN_SIZE = 25;
+    static const size_t PROFILE_READIN_SIZE = 23;
     ScoreMatrix **profile_matrix;
     // Memory layout of this profile is qL * AA
     //   Query length
