@@ -484,13 +484,13 @@ public:
     // const size_t PROFILE_ROW_SIZE = (((size_t) PROFILE_AA_SIZE / (VECSIZE_INT * 4)) + 1) * (VECSIZE_INT * 4);
     size_t profile_row_size;
     static const size_t PROFILE_CANON_DINUC_SIZE = 16;
-    static const size_t PROFILE_AA_SIZE = 24;
-    static const size_t PROFILE_CONSENSUS = 25;     // new
-    static const size_t PROFILE_NEFF = 26;          // new
+    static const size_t PROFILE_AA_SIZE = 20;
+    static const size_t PROFILE_CONSENSUS = 21;     // new
+    static const size_t PROFILE_NEFF = 22;          // new
     // static const size_t PROFILE_GAP_RESERVED1 = 23;
     // static const size_t PROFILE_GAP_RESERVED2 = 24;
     // 20 AA, 1 query, 1 consensus, 1 Neff M, 2 gap penalties
-    static const size_t PROFILE_READIN_SIZE = 27;
+    static const size_t PROFILE_READIN_SIZE = 25;
     ScoreMatrix **profile_matrix;
     // Memory layout of this profile is qL * AA
     //   Query length

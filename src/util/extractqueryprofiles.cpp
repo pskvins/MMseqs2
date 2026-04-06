@@ -143,10 +143,10 @@ int extractqueryprofiles(int argc, const char **argv, const Command& command) {
                         std::swap(data_cpy[currPos + 5], data_cpy[currPos + 7]);
                         std::swap(data_cpy[currPos + 8], data_cpy[currPos + 9]);
                         std::swap(data_cpy[currPos + 10], data_cpy[currPos + 11]);
-                        std::swap(data_cpy[currPos + 16], data_cpy[currPos + 23]);
-                        std::swap(data_cpy[currPos + 17], data_cpy[currPos + 22]);
-                        std::swap(data_cpy[currPos + 18], data_cpy[currPos + 21]);
-                        std::swap(data_cpy[currPos + 19], data_cpy[currPos + 20]);
+                        // std::swap(data_cpy[currPos + 16], data_cpy[currPos + 23]);
+                        // std::swap(data_cpy[currPos + 17], data_cpy[currPos + 22]);
+                        // std::swap(data_cpy[currPos + 18], data_cpy[currPos + 21]);
+                        // std::swap(data_cpy[currPos + 19], data_cpy[currPos + 20]);
                         currPos += Sequence::PROFILE_READIN_SIZE;
                         l++;
                     }
@@ -208,10 +208,10 @@ int extractqueryprofiles(int argc, const char **argv, const Command& command) {
                         std::swap(profile_char[pos * Sequence::PROFILE_READIN_SIZE + 5], profile_char[pos * Sequence::PROFILE_READIN_SIZE + 7]);
                         std::swap(profile_char[pos * Sequence::PROFILE_READIN_SIZE + 8], profile_char[pos * Sequence::PROFILE_READIN_SIZE + 9]);
                         std::swap(profile_char[pos * Sequence::PROFILE_READIN_SIZE + 10], profile_char[pos * Sequence::PROFILE_READIN_SIZE + 11]);
-                        std::swap(profile_char[pos * Sequence::PROFILE_READIN_SIZE + 16], profile_char[pos * Sequence::PROFILE_READIN_SIZE + 23]);
-                        std::swap(profile_char[pos * Sequence::PROFILE_READIN_SIZE + 17], profile_char[pos * Sequence::PROFILE_READIN_SIZE + 22]);
-                        std::swap(profile_char[pos * Sequence::PROFILE_READIN_SIZE + 18], profile_char[pos * Sequence::PROFILE_READIN_SIZE + 21]);
-                        std::swap(profile_char[pos * Sequence::PROFILE_READIN_SIZE + 19], profile_char[pos * Sequence::PROFILE_READIN_SIZE + 20]);
+                        // std::swap(profile_char[pos * Sequence::PROFILE_READIN_SIZE + 16], profile_char[pos * Sequence::PROFILE_READIN_SIZE + 23]);
+                        // std::swap(profile_char[pos * Sequence::PROFILE_READIN_SIZE + 17], profile_char[pos * Sequence::PROFILE_READIN_SIZE + 22]);
+                        // std::swap(profile_char[pos * Sequence::PROFILE_READIN_SIZE + 18], profile_char[pos * Sequence::PROFILE_READIN_SIZE + 21]);
+                        // std::swap(profile_char[pos * Sequence::PROFILE_READIN_SIZE + 19], profile_char[pos * Sequence::PROFILE_READIN_SIZE + 20]);
                     }
                     toBuffer(profile_char, seq.numSequence, seq.numConsensusSequence, neffM, seqLen, result);
                     sequenceWriter.writeData(result.c_str(), result.length(), key, thread_idx);
