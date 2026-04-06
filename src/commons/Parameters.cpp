@@ -2516,7 +2516,7 @@ void Parameters::setDefaults() {
     kmerSize =  0;
     targetSearchMode = 0;
     kmerScore.values = INT_MAX;
-    alphabetSize = MultiParam<NuclAA<int>>(NuclAA<int>(25,5));
+    alphabetSize = MultiParam<NuclAA<int>>(NuclAA<int>(21,5));
     maxSeqLen = MAX_SEQ_LEN; // 2^16
     maxResListLen = 300;
     sensitivity = 4;

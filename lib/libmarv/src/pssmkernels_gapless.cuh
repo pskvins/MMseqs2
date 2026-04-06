@@ -210,7 +210,7 @@ namespace hardcodedzero{
         __builtin_assume(blockDim.x == blocksize);
         __builtin_assume(blockDim.x % group_size == 0);
 
-        constexpr int numRowsPSSM = 25;
+        constexpr int numRowsPSSM = 21;
         #ifdef USE_IMPROVED_SMEM
         constexpr int numColumnsPSSM = std::max(group_size,8) * numRegs;
         #else
@@ -241,7 +241,7 @@ namespace hardcodedzero{
         GaplessPSSMState<ScoreType, numRegs, decltype(group), SharedPSSM, SmemIndexCalculator> state(shared_strided_PSSM, group);
 
         auto load_PSSM_single = [&]() {
-            for (int i=threadIdx.x; i<25*group_size*numRegs; i+=blockDim.x) {
+            for (int i=threadIdx.x; i<21*group_size*numRegs; i+=blockDim.x) {
                 const int letter = i/(group_size*numRegs);
                 const int col = i%(group_size*numRegs);
                 shared_strided_PSSM.data[letter][col] = strided_PSSM[letter][col];
@@ -250,7 +250,7 @@ namespace hardcodedzero{
         };
 
         auto load_PSSM_double = [&]() {
-            for (int i=threadIdx.x; i<25*group_size*numRegs; i+=blockDim.x) {
+            for (int i=threadIdx.x; i<21*group_size*numRegs; i+=blockDim.x) {
                 const int letter = i/(group_size*numRegs);
                 const int col = i%(group_size*numRegs);
                 auto value = strided_PSSM[letter][col];
@@ -269,7 +269,7 @@ namespace hardcodedzero{
             }
             __syncthreads();
 
-            // for (int i=threadIdx.x; i<25*group_size*numRegs*2; i+=blockDim.x) {
+            // for (int i=threadIdx.x; i<21*group_size*numRegs*2; i+=blockDim.x) {
             //     const int letter = i/(group_size*numRegs*2);
             //     const int outputCol = i%(group_size*numRegs*2);
 
@@ -392,7 +392,7 @@ namespace hardcodedzero{
         // std::cout << "blocksize " << blocksize << ", group_size " << group_size 
         //     << ", alignmentsPerBlock " << alignmentsPerBlock << ", numSelected " << numSelected << "\n";
 
-        constexpr int numRowsPSSM = 25;
+        constexpr int numRowsPSSM = 21;
         #ifdef USE_IMPROVED_SMEM
         constexpr int numColumnsPSSM = std::max(group_size,8) * numRegs;
         #else
@@ -620,7 +620,7 @@ namespace hardcodedzero{
         __builtin_assume(blockDim.x % group_size == 0);
 
         extern  __shared__ char externalSmem[];
-        constexpr int numRowsPSSM = 25;
+        constexpr int numRowsPSSM = 21;
         #ifdef USE_IMPROVED_SMEM
         constexpr int numColumnsPSSM = std::max(group_size,8) * numRegs;
         #else
@@ -661,7 +661,7 @@ namespace hardcodedzero{
             const int columnOffset = tileNr * group_size * numRegs;
             __syncthreads(); //wait for all groups before overwriting pssm
 
-            for (int i=threadIdx.x; i<25*group_size*numRegs; i+=blockDim.x) {
+            for (int i=threadIdx.x; i<21*group_size*numRegs; i+=blockDim.x) {
                 int letter = i/(group_size*numRegs);
                 int col = i%(group_size*numRegs);
                 //shared_strided_PSSM.data[letter][col] = strided_PSSM_1d[i];
@@ -675,7 +675,7 @@ namespace hardcodedzero{
             const int columnOffset = tileNr * group_size * numRegs;
             __syncthreads(); //wait for all groups before overwriting pssm
 
-            for (int i=threadIdx.x; i<25*group_size*numRegs; i+=blockDim.x) {
+            for (int i=threadIdx.x; i<21*group_size*numRegs; i+=blockDim.x) {
                 const int letter = i/(group_size*numRegs);
                 const int col = i%(group_size*numRegs);
                 auto value = strided_PSSM[letter][columnOffset + col];
@@ -948,7 +948,7 @@ namespace hardcodedzero{
         // std::cout << "blocksize " << blocksize << ", group_size " << group_size 
         //     << ", alignmentsPerBlock " << alignmentsPerBlock << ", numSelected " << numSelected << "\n";
 
-        constexpr int numRowsPSSM = 25;
+        constexpr int numRowsPSSM = 21;
         #ifdef USE_IMPROVED_SMEM
         constexpr int numColumnsPSSM = std::max(group_size,8) * numRegs;
         #else
@@ -1313,7 +1313,7 @@ namespace kernelparamzero{
         __builtin_assume(blockDim.x == blocksize);
         __builtin_assume(blockDim.x % group_size == 0);
 
-        constexpr int numRowsPSSM = 25;
+        constexpr int numRowsPSSM = 21;
         #ifdef USE_IMPROVED_SMEM
         constexpr int numColumnsPSSM = std::max(group_size,8) * numRegs;
         #else
@@ -1344,7 +1344,7 @@ namespace kernelparamzero{
         GaplessPSSMState<ScoreType, numRegs, decltype(group), SharedPSSM, SmemIndexCalculator> state(shared_strided_PSSM, group);
 
         auto load_PSSM_single = [&]() {
-            for (int i=threadIdx.x; i<25*group_size*numRegs; i+=blockDim.x) {
+            for (int i=threadIdx.x; i<21*group_size*numRegs; i+=blockDim.x) {
                 const int letter = i/(group_size*numRegs);
                 const int col = i%(group_size*numRegs);
                 shared_strided_PSSM.data[letter][col] = strided_PSSM[letter][col];
@@ -1353,7 +1353,7 @@ namespace kernelparamzero{
         };
 
         auto load_PSSM_double = [&]() {
-            for (int i=threadIdx.x; i<25*group_size*numRegs; i+=blockDim.x) {
+            for (int i=threadIdx.x; i<21*group_size*numRegs; i+=blockDim.x) {
                 const int letter = i/(group_size*numRegs);
                 const int col = i%(group_size*numRegs);
                 auto value = strided_PSSM[letter][col];
@@ -1473,7 +1473,7 @@ namespace kernelparamzero{
         // std::cout << "blocksize " << blocksize << ", group_size " << group_size 
         //     << ", alignmentsPerBlock " << alignmentsPerBlock << ", numSelected " << numSelected << "\n";
 
-        constexpr int numRowsPSSM = 25;
+        constexpr int numRowsPSSM = 21;
         #ifdef USE_IMPROVED_SMEM
         constexpr int numColumnsPSSM = std::max(group_size,8) * numRegs;
         #else
@@ -1703,7 +1703,7 @@ namespace kernelparamzero{
         __builtin_assume(blockDim.x % group_size == 0);
 
         extern  __shared__ char externalSmem[];
-        constexpr int numRowsPSSM = 25;
+        constexpr int numRowsPSSM = 21;
         #ifdef USE_IMPROVED_SMEM
         constexpr int numColumnsPSSM = std::max(group_size,8) * numRegs;
         #else
@@ -1744,7 +1744,7 @@ namespace kernelparamzero{
             const int columnOffset = tileNr * group_size * numRegs;
             __syncthreads(); //wait for all groups before overwriting pssm
 
-            for (int i=threadIdx.x; i<25*group_size*numRegs; i+=blockDim.x) {
+            for (int i=threadIdx.x; i<21*group_size*numRegs; i+=blockDim.x) {
                 int letter = i/(group_size*numRegs);
                 int col = i%(group_size*numRegs);
                 //shared_strided_PSSM.data[letter][col] = strided_PSSM_1d[i];
@@ -1758,7 +1758,7 @@ namespace kernelparamzero{
             const int columnOffset = tileNr * group_size * numRegs;
             __syncthreads(); //wait for all groups before overwriting pssm
 
-            for (int i=threadIdx.x; i<25*group_size*numRegs; i+=blockDim.x) {
+            for (int i=threadIdx.x; i<21*group_size*numRegs; i+=blockDim.x) {
                 const int letter = i/(group_size*numRegs);
                 const int col = i%(group_size*numRegs);
                 auto value = strided_PSSM[letter][columnOffset + col];
@@ -2031,7 +2031,7 @@ namespace kernelparamzero{
         // std::cout << "blocksize " << blocksize << ", group_size " << group_size 
         //     << ", alignmentsPerBlock " << alignmentsPerBlock << ", numSelected " << numSelected << "\n";
 
-        constexpr int numRowsPSSM = 25;
+        constexpr int numRowsPSSM = 21;
         #ifdef USE_IMPROVED_SMEM
         constexpr int numColumnsPSSM = std::max(group_size,8) * numRegs;
         #else

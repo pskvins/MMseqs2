@@ -60,7 +60,7 @@ void parseHMM(char *data, std::string *sequence, std::string *header, char *prof
 
     //ammino acids are ordered in HMM
     const char *words[22];
-    float probs[25];
+    float probs[21];
     int seq_pos = 0;
     size_t curr_pos = 0;
     while (data[0] != '/' && data[1] != '/') {

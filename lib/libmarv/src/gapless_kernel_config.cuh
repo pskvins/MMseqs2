@@ -55,7 +55,7 @@ namespace cudasw4{
     // This must match the SharedPSSM_singletile calculation in pssmkernels_gapless.cuh
     __inline__
     size_t calculateGaplessSharedMemory(int groupsize, int numRegs, int scoreTypeSize = 4){
-        constexpr int numRowsPSSM = 25;
+        constexpr int numRowsPSSM = 21;
         // With USE_IMPROVED_SMEM (which is defined by default)
         int numColumnsPSSM = std::max(groupsize, 8) * numRegs;
         // SharedPSSM_singletile pads columns to 16-byte alignment
