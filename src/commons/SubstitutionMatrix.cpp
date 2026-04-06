@@ -407,50 +407,50 @@ void SubstitutionMatrix::setupDinucleotideLetterMapping(){
                     bool firstCanonical  = (up1 == 'A' || up1 == 'C' || up1 == 'G' || up1 == 'T' || up1 == 'U');
                     bool secondCanonical = (up2 == 'A' || up2 == 'C' || up2 == 'G' || up2 == 'T' || up2 == 'U');
 
-                    if (firstCanonical && !secondCanonical) {
-                        // AX, CX, GX, UX/TX
-                        switch (up1) {
-                            case 'A':
-                                this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'T']; // AX
-                                break;
-                            case 'C':
-                                this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'V']; // CX
-                                break;
-                            case 'G':
-                                this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'W']; // GX
-                                break;
-                            case 'T':
-                            case 'U':
-                                this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'Y']; // TX/UX
-                                break;
-                            default:
-                                this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'X'];
-                                break;
-                        }
-                    } else if (!firstCanonical && secondCanonical) {
-                        // XA, XC, XG, XU/TU
-                        switch (up2) {
-                            case 'A':
-                                this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'B']; // XA
-                                break;
-                            case 'C':
-                                this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'J']; // XC
-                                break;
-                            case 'G':
-                                this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'O']; // XG
-                                break;
-                            case 'T':
-                            case 'U':
-                                this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'U']; // XT/XU
-                                break;
-                            default:
-                                this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'X'];
-                                break;
-                        }
-                    } else {
+                    // if (firstCanonical && !secondCanonical) {
+                    //     // AX, CX, GX, UX/TX
+                    //     switch (up1) {
+                    //         case 'A':
+                    //             this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'T']; // AX
+                    //             break;
+                    //         case 'C':
+                    //             this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'V']; // CX
+                    //             break;
+                    //         case 'G':
+                    //             this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'W']; // GX
+                    //             break;
+                    //         case 'T':
+                    //         case 'U':
+                    //             this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'Y']; // TX/UX
+                    //             break;
+                    //         default:
+                    //             this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'X'];
+                    //             break;
+                    //     }
+                    // } else if (!firstCanonical && secondCanonical) {
+                    //     // XA, XC, XG, XU/TU
+                    //     switch (up2) {
+                    //         case 'A':
+                    //             this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'B']; // XA
+                    //             break;
+                    //         case 'C':
+                    //             this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'J']; // XC
+                    //             break;
+                    //         case 'G':
+                    //             this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'O']; // XG
+                    //             break;
+                    //         case 'T':
+                    //         case 'U':
+                    //             this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'U']; // XT/XU
+                    //             break;
+                    //         default:
+                    //             this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'X'];
+                    //             break;
+                    //     }
+                    // } else {
                         // Neither side canonical: map to X
                         this->aa2num[static_cast<int>(dinucleotide)] = this->aa2num[(int)'X'];
-                    }
+                    // }
                     break;
             }
         }
@@ -478,14 +478,14 @@ void SubstitutionMatrix::setupDinucleotideLetterMapping(){
     this->revcomp[this->aa2num[(int)'N']] = this->aa2num[(int)'M'];
     this->revcomp[this->aa2num[(int)'H']] = this->aa2num[(int)'D'];
     this->revcomp[this->aa2num[(int)'S']] = this->aa2num[(int)'C'];
-    this->revcomp[this->aa2num[(int)'T']] = this->aa2num[(int)'U'];
-    this->revcomp[this->aa2num[(int)'V']] = this->aa2num[(int)'O'];
-    this->revcomp[this->aa2num[(int)'W']] = this->aa2num[(int)'J'];
-    this->revcomp[this->aa2num[(int)'Y']] = this->aa2num[(int)'B'];
-    this->revcomp[this->aa2num[(int)'B']] = this->aa2num[(int)'Y'];
-    this->revcomp[this->aa2num[(int)'J']] = this->aa2num[(int)'W'];
-    this->revcomp[this->aa2num[(int)'O']] = this->aa2num[(int)'V'];
-    this->revcomp[this->aa2num[(int)'U']] = this->aa2num[(int)'T'];
+    // this->revcomp[this->aa2num[(int)'T']] = this->aa2num[(int)'U'];
+    // this->revcomp[this->aa2num[(int)'V']] = this->aa2num[(int)'O'];
+    // this->revcomp[this->aa2num[(int)'W']] = this->aa2num[(int)'J'];
+    // this->revcomp[this->aa2num[(int)'Y']] = this->aa2num[(int)'B'];
+    // this->revcomp[this->aa2num[(int)'B']] = this->aa2num[(int)'Y'];
+    // this->revcomp[this->aa2num[(int)'J']] = this->aa2num[(int)'W'];
+    // this->revcomp[this->aa2num[(int)'O']] = this->aa2num[(int)'V'];
+    // this->revcomp[this->aa2num[(int)'U']] = this->aa2num[(int)'T'];
     this->revcomp[this->aa2num[(int)'X']] = this->aa2num[(int)'X'];
 
     // Set up head
@@ -494,30 +494,30 @@ void SubstitutionMatrix::setupDinucleotideLetterMapping(){
         'M': 'O', 'A': 'O', 'P': 'O', 'I': 'O',
         'E': 'U', 'N': 'U', 'H': 'U', 'S': 'U'
         'T': 'B', 'V': 'J', 'W': 'O', 'Y': 'U', 'REST': 'X'} */
-    this->head[this->aa2num[(int)'C']] = this->aa2num[(int)'B'];
-    this->head[this->aa2num[(int)'G']] = this->aa2num[(int)'B'];
-    this->head[this->aa2num[(int)'L']] = this->aa2num[(int)'B'];
-    this->head[this->aa2num[(int)'Q']] = this->aa2num[(int)'B'];
-    this->head[this->aa2num[(int)'D']] = this->aa2num[(int)'J'];
-    this->head[this->aa2num[(int)'F']] = this->aa2num[(int)'J'];
-    this->head[this->aa2num[(int)'R']] = this->aa2num[(int)'J'];
-    this->head[this->aa2num[(int)'K']] = this->aa2num[(int)'J'];
-    this->head[this->aa2num[(int)'M']] = this->aa2num[(int)'O'];
-    this->head[this->aa2num[(int)'A']] = this->aa2num[(int)'O'];
-    this->head[this->aa2num[(int)'P']] = this->aa2num[(int)'O'];
-    this->head[this->aa2num[(int)'I']] = this->aa2num[(int)'O'];
-    this->head[this->aa2num[(int)'E']] = this->aa2num[(int)'U'];
-    this->head[this->aa2num[(int)'N']] = this->aa2num[(int)'U'];
-    this->head[this->aa2num[(int)'H']] = this->aa2num[(int)'U'];
-    this->head[this->aa2num[(int)'S']] = this->aa2num[(int)'U'];
-    this->head[this->aa2num[(int)'T']] = this->aa2num[(int)'B'];
-    this->head[this->aa2num[(int)'V']] = this->aa2num[(int)'J'];
-    this->head[this->aa2num[(int)'W']] = this->aa2num[(int)'O'];
-    this->head[this->aa2num[(int)'Y']] = this->aa2num[(int)'U'];
-    this->head[this->aa2num[(int)'B']] = this->aa2num[(int)'X'];
-    this->head[this->aa2num[(int)'J']] = this->aa2num[(int)'X'];
-    this->head[this->aa2num[(int)'O']] = this->aa2num[(int)'X'];
-    this->head[this->aa2num[(int)'U']] = this->aa2num[(int)'X'];
+    this->head[this->aa2num[(int)'C']] = this->aa2num[(int)'X'];
+    this->head[this->aa2num[(int)'G']] = this->aa2num[(int)'X'];
+    this->head[this->aa2num[(int)'L']] = this->aa2num[(int)'X'];
+    this->head[this->aa2num[(int)'Q']] = this->aa2num[(int)'X'];
+    this->head[this->aa2num[(int)'D']] = this->aa2num[(int)'X'];
+    this->head[this->aa2num[(int)'F']] = this->aa2num[(int)'X'];
+    this->head[this->aa2num[(int)'R']] = this->aa2num[(int)'X'];
+    this->head[this->aa2num[(int)'K']] = this->aa2num[(int)'X'];
+    this->head[this->aa2num[(int)'M']] = this->aa2num[(int)'X'];
+    this->head[this->aa2num[(int)'A']] = this->aa2num[(int)'X'];
+    this->head[this->aa2num[(int)'P']] = this->aa2num[(int)'X'];
+    this->head[this->aa2num[(int)'I']] = this->aa2num[(int)'X'];
+    this->head[this->aa2num[(int)'E']] = this->aa2num[(int)'X'];
+    this->head[this->aa2num[(int)'N']] = this->aa2num[(int)'X'];
+    this->head[this->aa2num[(int)'H']] = this->aa2num[(int)'X'];
+    this->head[this->aa2num[(int)'S']] = this->aa2num[(int)'X'];
+    // this->head[this->aa2num[(int)'T']] = this->aa2num[(int)'B'];
+    // this->head[this->aa2num[(int)'V']] = this->aa2num[(int)'J'];
+    // this->head[this->aa2num[(int)'W']] = this->aa2num[(int)'O'];
+    // this->head[this->aa2num[(int)'Y']] = this->aa2num[(int)'U'];
+    // this->head[this->aa2num[(int)'B']] = this->aa2num[(int)'X'];
+    // this->head[this->aa2num[(int)'J']] = this->aa2num[(int)'X'];
+    // this->head[this->aa2num[(int)'O']] = this->aa2num[(int)'X'];
+    // this->head[this->aa2num[(int)'U']] = this->aa2num[(int)'X'];
     this->head[this->aa2num[(int)'X']] = this->aa2num[(int)'X'];
     
     // Set up tail
@@ -526,30 +526,30 @@ void SubstitutionMatrix::setupDinucleotideLetterMapping(){
     'M': 'T', 'A': 'V', 'P': 'W', 'I': 'Y',
     'E': 'T', 'N': 'V', 'H': 'W', 'S': 'Y',
     'B': 'T', 'J': 'V', 'O': 'W', 'U': 'Y', 'REST': 'X'} */
-    this->tail[this->aa2num[(int)'C']] = this->aa2num[(int)'T'];
-    this->tail[this->aa2num[(int)'G']] = this->aa2num[(int)'V'];
-    this->tail[this->aa2num[(int)'L']] = this->aa2num[(int)'W'];
-    this->tail[this->aa2num[(int)'Q']] = this->aa2num[(int)'Y'];
-    this->tail[this->aa2num[(int)'D']] = this->aa2num[(int)'T'];
-    this->tail[this->aa2num[(int)'F']] = this->aa2num[(int)'V'];
-    this->tail[this->aa2num[(int)'R']] = this->aa2num[(int)'W'];
-    this->tail[this->aa2num[(int)'K']] = this->aa2num[(int)'Y'];
-    this->tail[this->aa2num[(int)'M']] = this->aa2num[(int)'T'];
-    this->tail[this->aa2num[(int)'A']] = this->aa2num[(int)'V'];
-    this->tail[this->aa2num[(int)'P']] = this->aa2num[(int)'W'];
-    this->tail[this->aa2num[(int)'I']] = this->aa2num[(int)'Y'];
-    this->tail[this->aa2num[(int)'E']] = this->aa2num[(int)'T'];
-    this->tail[this->aa2num[(int)'N']] = this->aa2num[(int)'V'];
-    this->tail[this->aa2num[(int)'H']] = this->aa2num[(int)'W'];
-    this->tail[this->aa2num[(int)'S']] = this->aa2num[(int)'Y'];
-    this->tail[this->aa2num[(int)'B']] = this->aa2num[(int)'T'];
-    this->tail[this->aa2num[(int)'J']] = this->aa2num[(int)'V'];
-    this->tail[this->aa2num[(int)'O']] = this->aa2num[(int)'W'];
-    this->tail[this->aa2num[(int)'U']] = this->aa2num[(int)'Y'];
-    this->tail[this->aa2num[(int)'T']] = this->aa2num[(int)'X'];
-    this->tail[this->aa2num[(int)'V']] = this->aa2num[(int)'X'];
-    this->tail[this->aa2num[(int)'W']] = this->aa2num[(int)'X'];
-    this->tail[this->aa2num[(int)'Y']] = this->aa2num[(int)'X'];
+    this->tail[this->aa2num[(int)'C']] = this->aa2num[(int)'X'];
+    this->tail[this->aa2num[(int)'G']] = this->aa2num[(int)'X'];
+    this->tail[this->aa2num[(int)'L']] = this->aa2num[(int)'X'];
+    this->tail[this->aa2num[(int)'Q']] = this->aa2num[(int)'X'];
+    this->tail[this->aa2num[(int)'D']] = this->aa2num[(int)'X'];
+    this->tail[this->aa2num[(int)'F']] = this->aa2num[(int)'X'];
+    this->tail[this->aa2num[(int)'R']] = this->aa2num[(int)'X'];
+    this->tail[this->aa2num[(int)'K']] = this->aa2num[(int)'X'];
+    this->tail[this->aa2num[(int)'M']] = this->aa2num[(int)'X'];
+    this->tail[this->aa2num[(int)'A']] = this->aa2num[(int)'X'];
+    this->tail[this->aa2num[(int)'P']] = this->aa2num[(int)'X'];
+    this->tail[this->aa2num[(int)'I']] = this->aa2num[(int)'X'];
+    this->tail[this->aa2num[(int)'E']] = this->aa2num[(int)'X'];
+    this->tail[this->aa2num[(int)'N']] = this->aa2num[(int)'X'];
+    this->tail[this->aa2num[(int)'H']] = this->aa2num[(int)'X'];
+    this->tail[this->aa2num[(int)'S']] = this->aa2num[(int)'X'];
+    // this->tail[this->aa2num[(int)'B']] = this->aa2num[(int)'T'];
+    // this->tail[this->aa2num[(int)'J']] = this->aa2num[(int)'V'];
+    // this->tail[this->aa2num[(int)'O']] = this->aa2num[(int)'W'];
+    // this->tail[this->aa2num[(int)'U']] = this->aa2num[(int)'Y'];
+    // this->tail[this->aa2num[(int)'T']] = this->aa2num[(int)'X'];
+    // this->tail[this->aa2num[(int)'V']] = this->aa2num[(int)'X'];
+    // this->tail[this->aa2num[(int)'W']] = this->aa2num[(int)'X'];
+    // this->tail[this->aa2num[(int)'Y']] = this->aa2num[(int)'X'];
     this->tail[this->aa2num[(int)'X']] = this->aa2num[(int)'X'];
 
     // Set up dinucleotide to the first or the second nucleotide
@@ -569,14 +569,14 @@ void SubstitutionMatrix::setupDinucleotideLetterMapping(){
     this->dinucToNuc[this->aa2num[(int)'N']] = this->aa2num[(int)'U'];
     this->dinucToNuc[this->aa2num[(int)'H']] = this->aa2num[(int)'U'];
     this->dinucToNuc[this->aa2num[(int)'S']] = this->aa2num[(int)'U'];
-    this->dinucToNuc[this->aa2num[(int)'T']] = this->aa2num[(int)'A'];
-    this->dinucToNuc[this->aa2num[(int)'V']] = this->aa2num[(int)'C'];
-    this->dinucToNuc[this->aa2num[(int)'W']] = this->aa2num[(int)'G'];
-    this->dinucToNuc[this->aa2num[(int)'Y']] = this->aa2num[(int)'U'];
-    this->dinucToNuc[this->aa2num[(int)'B']] = this->aa2num[(int)'X'];
-    this->dinucToNuc[this->aa2num[(int)'J']] = this->aa2num[(int)'X'];
-    this->dinucToNuc[this->aa2num[(int)'O']] = this->aa2num[(int)'X'];
-    this->dinucToNuc[this->aa2num[(int)'U']] = this->aa2num[(int)'X'];
+    // this->dinucToNuc[this->aa2num[(int)'T']] = this->aa2num[(int)'A'];
+    // this->dinucToNuc[this->aa2num[(int)'V']] = this->aa2num[(int)'C'];
+    // this->dinucToNuc[this->aa2num[(int)'W']] = this->aa2num[(int)'G'];
+    // this->dinucToNuc[this->aa2num[(int)'Y']] = this->aa2num[(int)'U'];
+    // this->dinucToNuc[this->aa2num[(int)'B']] = this->aa2num[(int)'X'];
+    // this->dinucToNuc[this->aa2num[(int)'J']] = this->aa2num[(int)'X'];
+    // this->dinucToNuc[this->aa2num[(int)'O']] = this->aa2num[(int)'X'];
+    // this->dinucToNuc[this->aa2num[(int)'U']] = this->aa2num[(int)'X'];
     this->dinucToNuc[this->aa2num[(int)'X']] = this->aa2num[(int)'X'];
 }
 
