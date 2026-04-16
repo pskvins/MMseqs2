@@ -276,9 +276,12 @@ int databases(int argc, const char **argv, const Command &command) {
         }
     }
     if (downloadIdx == -1) {
-        par.printUsageMessage(command, par.help ? MMseqsParameter::COMMAND_EXPERT : 0, description.c_str());
-        Debug(Debug::ERROR) << "Selected database " << par.db1 << " was not found\n";
-        EXIT(EXIT_FAILURE);
+        if (par.db1.find('/') == std::string::npos) {
+            par.printUsageMessage(command, par.help ? MMseqsParameter::COMMAND_EXPERT : 0, description.c_str());
+            Debug(Debug::ERROR) << "Selected database " << par.db1 << " was not found\n";
+            EXIT(EXIT_FAILURE);
+        }
+        // Path contains '/' — treat as local file, shell script validates existence
     }
     par.printParameters(command.cmd, argc, argv, par.databases);
     std::string tmpDir = par.db3;
@@ -291,10 +294,14 @@ int databases(int argc, const char **argv, const Command &command) {
     par.filenames.push_back(tmpDir);
 
     CommandCaller cmd;
-    for (size_t i = 0; i < usedDownloads[downloadIdx].environment.size(); ++i) {
-        cmd.addVariable(usedDownloads[downloadIdx].environment[i].key, usedDownloads[downloadIdx].environment[i].value);
+    if (downloadIdx >= 0) {
+        for (size_t i = 0; i < usedDownloads[downloadIdx].environment.size(); ++i) {
+            cmd.addVariable(usedDownloads[downloadIdx].environment[i].key, usedDownloads[downloadIdx].environment[i].value);
+        }
+        cmd.addVariable("TAXONOMY", usedDownloads[downloadIdx].hasTaxonomy ? "TRUE" : NULL);
+    } else {
+        cmd.addVariable("TAXONOMY", NULL);
     }
-    cmd.addVariable("TAXONOMY", usedDownloads[downloadIdx].hasTaxonomy ? "TRUE" : NULL);
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
     cmd.addVariable("VERB_PAR", par.createParameterString(par.onlyverbosity).c_str());
     cmd.addVariable("COMP_PAR", par.createParameterString(par.verbandcompression).c_str());
@@ -303,7 +310,11 @@ int databases(int argc, const char **argv, const Command &command) {
     cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());
     cmd.addVariable("THREADS_COMP_PAR", par.createParameterString(par.threadsandcompression).c_str());
     std::string program = tmpDir + "/download.sh";
-    FileUtil::writeFile(program, usedDownloads[downloadIdx].script, usedDownloads[downloadIdx].scriptLength);
+    if (downloadIdx >= 0) {
+        FileUtil::writeFile(program, usedDownloads[downloadIdx].script, usedDownloads[downloadIdx].scriptLength);
+    } else {
+        FileUtil::writeFile(program, databases_sh, databases_sh_len);
+    }
     cmd.execProgram(program.c_str(), par.filenames);
 
     // Should never get here
