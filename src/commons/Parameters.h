@@ -445,6 +445,7 @@ public:
     int    realignMaxSeqs;               // Max alignments to realign
     std::string spacedKmerPattern;       // User-specified kmer pattern
     std::string localTmp;                // Local temporary path
+    std::string downloadDir;             // Persistent download cache directory
 
 
     // ALIGNMENT
@@ -824,6 +825,7 @@ public:
     PARAMETER(PARAM_PRELOAD_MODE)
     PARAMETER(PARAM_SPACED_KMER_PATTERN)
     PARAMETER(PARAM_LOCAL_TMP)
+    PARAMETER(PARAM_DOWNLOAD_DIR)
     std::vector<MMseqsParameter*> prefilter;
     std::vector<MMseqsParameter*> ungappedprefilter;
     std::vector<MMseqsParameter*> gappedprefilter;

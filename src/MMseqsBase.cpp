@@ -129,9 +129,13 @@ std::vector<Command> baseCommands = {
                                    {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }}},
         {"databases",            databases,            &par.databases,            COMMAND_DATABASE_CREATION,
                 "List and download databases",
-                NULL,
+                "# Download a known database\n"
+                "mmseqs databases UniRef30_2302 db tmp\n\n"
+                "# Index a local FASTA file (use ./relative or /absolute paths)\n"
+                "mmseqs databases ./input.fasta.gz db tmp\n"
+                "mmseqs databases /data/rnacentral_active.fasta.gz db tmp\n\n",
                 "Milot Mirdita <milot@mirdita.de>",
-                "<name> <o:sequenceDB> <tmpDir>",
+                "<name|path> <o:sequenceDB> <tmpDir>",
                 CITATION_TAXONOMY|CITATION_MMSEQS2, {{"selection", 0, DbType::ZERO_OR_ALL, &DbValidator::empty },
                                                            {"sequenceDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
                                                            {"tmpDir",     DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }}},

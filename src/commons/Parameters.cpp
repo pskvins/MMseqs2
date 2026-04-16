@@ -70,6 +70,7 @@ Parameters::Parameters():
         PARAM_PRELOAD_MODE(PARAM_PRELOAD_MODE_ID, "--db-load-mode", "Preload mode", "Database preload mode 0: auto, 1: fread, 2: mmap, 3: mmap+touch", typeid(int), (void *) &preloadMode, "[0-3]{1}", MMseqsParameter::COMMAND_COMMON | MMseqsParameter::COMMAND_EXPERT),
         PARAM_SPACED_KMER_PATTERN(PARAM_SPACED_KMER_PATTERN_ID, "--spaced-kmer-pattern", "Spaced k-mer pattern", "User-specified spaced k-mer pattern", typeid(std::string), (void *) &spacedKmerPattern, "^1[01]*1$", MMseqsParameter::COMMAND_PREFILTER | MMseqsParameter::COMMAND_EXPERT),
         PARAM_LOCAL_TMP(PARAM_LOCAL_TMP_ID, "--local-tmp", "Local temporary path", "Path where some of the temporary files will be created", typeid(std::string), (void *) &localTmp, "", MMseqsParameter::COMMAND_PREFILTER | MMseqsParameter::COMMAND_EXPERT),
+        PARAM_DOWNLOAD_DIR(PARAM_DOWNLOAD_DIR_ID, "--download-dir", "Download cache directory", "Persistent directory for downloaded files (avoids re-downloading)", typeid(std::string), (void *) &downloadDir, "", MMseqsParameter::COMMAND_MISC),
         // alignment
         PARAM_ALIGNMENT_MODE(PARAM_ALIGNMENT_MODE_ID, "--alignment-mode", "Alignment mode", "How to compute the alignment:\n0: automatic\n1: only score and end_pos\n2: also start_pos and cov\n3: also seq.id\n4: only ungapped alignment", typeid(int), (void *) &alignmentMode, "^[0-5]{1}$", MMseqsParameter::COMMAND_ALIGN),
         PARAM_ALIGNMENT_OUTPUT_MODE(PARAM_ALIGNMENT_OUTPUT_MODE_ID, "--alignment-output-mode", "Alignment mode", "How to compute the alignment:\n0: automatic\n1: only score and end_pos\n2: also start_pos and cov\n3: also seq.id\n4: only ungapped alignment\n5: score only (output) cluster format", typeid(int), (void *) &alignmentOutputMode, "^[0-1]{1}$", MMseqsParameter::COMMAND_ALIGN),
@@ -1633,6 +1634,7 @@ Parameters::Parameters():
     databases.push_back(&PARAM_COMPRESSED);
     databases.push_back(&PARAM_THREADS);
     databases.push_back(&PARAM_V);
+    databases.push_back(&PARAM_DOWNLOAD_DIR);
 
     // tar2db
     tar2db.push_back(&PARAM_OUTPUT_DBTYPE);
@@ -2527,6 +2529,7 @@ void Parameters::setDefaults() {
     splitAA = false;
     spacedKmerPattern = "";
     localTmp = "";
+    downloadDir = "downloads";
 
     // search workflow
     numIterations = 1;

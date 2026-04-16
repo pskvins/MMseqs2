@@ -157,6 +157,20 @@ std::vector<DatabaseDownload> downloads = {{
                                                    "https://github.com/lskatz/Kalamari",
                                                    true, Parameters::DBTYPE_NUCLEOTIDES, databases_sh, databases_sh_len,
                                                    { }
+                                           }, {
+                                                   "RNAcentral_current",
+                                                   "RNAcentral active sequences (latest release). Non-deterministic: contents change with each release.",
+                                                   "RNAcentral Consortium: RNAcentral 2021: secondary structure integration, improved sequence search and new member databases. Nucleic Acids Res 49(D1), D212-D220 (2021)",
+                                                   "https://rnacentral.org",
+                                                   false, Parameters::DBTYPE_NUCLEOTIDES, databases_sh, databases_sh_len,
+                                                   { }
+                                           }, {
+                                                   "RNAcentral_26_0",
+                                                   "RNAcentral active sequences (release 26.0, deterministic).",
+                                                   "RNAcentral Consortium: RNAcentral 2021: secondary structure integration, improved sequence search and new member databases. Nucleic Acids Res 49(D1), D212-D220 (2021)",
+                                                   "https://rnacentral.org",
+                                                   false, Parameters::DBTYPE_NUCLEOTIDES, databases_sh, databases_sh_len,
+                                                   { }
                                            },
 };
 
@@ -276,9 +290,12 @@ int databases(int argc, const char **argv, const Command &command) {
         }
     }
     if (downloadIdx == -1) {
-        par.printUsageMessage(command, par.help ? MMseqsParameter::COMMAND_EXPERT : 0, description.c_str());
-        Debug(Debug::ERROR) << "Selected database " << par.db1 << " was not found\n";
-        EXIT(EXIT_FAILURE);
+        if (par.db1.find('/') == std::string::npos) {
+            par.printUsageMessage(command, par.help ? MMseqsParameter::COMMAND_EXPERT : 0, description.c_str());
+            Debug(Debug::ERROR) << "Selected database " << par.db1 << " was not found\n";
+            EXIT(EXIT_FAILURE);
+        }
+        // Path contains '/' — treat as local file, shell script validates existence
     }
     par.printParameters(command.cmd, argc, argv, par.databases);
     std::string tmpDir = par.db3;
@@ -291,10 +308,14 @@ int databases(int argc, const char **argv, const Command &command) {
     par.filenames.push_back(tmpDir);
 
     CommandCaller cmd;
-    for (size_t i = 0; i < usedDownloads[downloadIdx].environment.size(); ++i) {
-        cmd.addVariable(usedDownloads[downloadIdx].environment[i].key, usedDownloads[downloadIdx].environment[i].value);
+    if (downloadIdx >= 0) {
+        for (size_t i = 0; i < usedDownloads[downloadIdx].environment.size(); ++i) {
+            cmd.addVariable(usedDownloads[downloadIdx].environment[i].key, usedDownloads[downloadIdx].environment[i].value);
+        }
+        cmd.addVariable("TAXONOMY", usedDownloads[downloadIdx].hasTaxonomy ? "TRUE" : NULL);
+    } else {
+        cmd.addVariable("TAXONOMY", NULL);
     }
-    cmd.addVariable("TAXONOMY", usedDownloads[downloadIdx].hasTaxonomy ? "TRUE" : NULL);
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
     cmd.addVariable("VERB_PAR", par.createParameterString(par.onlyverbosity).c_str());
     cmd.addVariable("COMP_PAR", par.createParameterString(par.verbandcompression).c_str());
@@ -302,8 +323,26 @@ int databases(int argc, const char **argv, const Command &command) {
     cmd.addVariable("ARIA_NUM_CONN", SSTR(std::min(16, par.threads)).c_str());
     cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());
     cmd.addVariable("THREADS_COMP_PAR", par.createParameterString(par.threadsandcompression).c_str());
+    if (downloadIdx >= 0 && par.downloadDir.empty() == false) {
+        std::string dlDir = par.downloadDir;
+        // Resolve relative paths against CWD
+        if (dlDir[0] != '/') {
+            char cwd[PATH_MAX];
+            if (getcwd(cwd, sizeof(cwd)) != NULL) {
+                dlDir = std::string(cwd) + "/" + dlDir;
+            }
+        }
+        if (FileUtil::directoryExists(dlDir.c_str()) == false) {
+            FileUtil::makeDir(dlDir.c_str());
+        }
+        cmd.addVariable("DOWNLOAD_DIR", dlDir.c_str());
+    }
     std::string program = tmpDir + "/download.sh";
-    FileUtil::writeFile(program, usedDownloads[downloadIdx].script, usedDownloads[downloadIdx].scriptLength);
+    if (downloadIdx >= 0) {
+        FileUtil::writeFile(program, usedDownloads[downloadIdx].script, usedDownloads[downloadIdx].scriptLength);
+    } else {
+        FileUtil::writeFile(program, databases_sh, databases_sh_len);
+    }
     cmd.execProgram(program.c_str(), par.filenames);
 
     // Should never get here
