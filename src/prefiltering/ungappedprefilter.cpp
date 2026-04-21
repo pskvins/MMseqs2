@@ -120,6 +120,7 @@ void runFilterOnGpu(Parameters & par, BaseMatrix * subMat,
     std::vector<size_t> offsets;
     std::vector<int32_t> lengths;
     GPUSharedMemory* layout = NULL;
+    GPUSharedMemorySem gpuSem;
     if (hash.empty()) {
         offsets.reserve(tdbr->getSize() + 1);
         lengths.reserve(tdbr->getSize());
@@ -132,6 +133,7 @@ void runFilterOnGpu(Parameters & par, BaseMatrix * subMat,
         lengthData = lengths.data();
     } else {
         layout = GPUSharedMemory::openSharedMemory(hash);
+        gpuSem.open(hash);
     }
 
     const bool serverMode = par.gpuServer;
@@ -350,6 +352,7 @@ void runFilterOnGpu(Parameters & par, BaseMatrix * subMat,
                         layout->queryLen = qSeq.L;
                         std::atomic_thread_fence(std::memory_order_release);
                         layout->state.store(GPUSharedMemory::READY, std::memory_order_release);
+                        gpuSem.post();
 
                         while (true) {
                             if (layout->serverExit.load(std::memory_order_acquire) == true) {
@@ -538,6 +541,7 @@ void runFilterOnGpu(Parameters & par, BaseMatrix * subMat,
         delete marv;
     }
     if (serverMode != 0 && layout != NULL) {
+        gpuSem.close();
         GPUSharedMemory::unmap(layout);
     }
 
