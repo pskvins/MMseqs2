@@ -322,26 +322,13 @@ case "${INPUT_TYPE}" in
     ;;
     "LOCAL_FASTA")
         eval "set -- $ARR"
-        export MMSEQS_FORCE_MERGE=1
+        # Fused pipeline: makepaddedseqdb reads FASTA directly (createdb +
+        # splitsequence + padding in a single streaming pass), then
+        # createindex --index-subset 2 streams SequenceLookup with constant
+        # memory via MADV_DONTNEED.
         # shellcheck disable=SC2086
-        set +e
-        CREATEDB_LOG=$("${MMSEQS}" createdb "${@}" "${TMP_PATH}/createdb" ${THREADS_COMP_PAR} 2>&1)
-        CREATEDB_RET=$?
-        set -e
-        printf "%s\n" "${CREATEDB_LOG}"
-        [ $CREATEDB_RET -ne 0 ] && fail "createdb died"
-        case "${CREATEDB_LOG}" in
-            *"Database type: Nucleotide"*) ;;
-            *) fail "Local file indexing only supports nucleotide databases" ;;
-        esac
-        # shellcheck disable=SC2086
-        "${MMSEQS}" splitsequence "${TMP_PATH}/createdb" "${TMP_PATH}/splitdb" \
-            --sequence-overlap 0 --sequence-split-mode 0 --headers-split-mode 1 \
-            ${THREADS_PAR} \
-            || fail "splitsequence died"
-        # shellcheck disable=SC2086
-        "${MMSEQS}" makepaddedseqdb "${TMP_PATH}/splitdb" "${OUTDB}" \
-            ${THREADS_PAR} \
+        "${MMSEQS}" makepaddedseqdb "${@}" "${OUTDB}" \
+            --headers-split-mode 1 ${THREADS_PAR} \
             || fail "makepaddedseqdb died"
         mkdir -p "${TMP_PATH}/indexdb"
         # shellcheck disable=SC2086
@@ -349,12 +336,6 @@ case "${INPUT_TYPE}" in
             --split 1 --index-subset 2 ${THREADS_PAR} \
             || fail "createindex died"
         rm -rf -- "${TMP_PATH}/indexdb"
-        if [ -n "${REMOVE_TMP}" ]; then
-            # shellcheck disable=SC2086
-            "${MMSEQS}" rmdb "${TMP_PATH}/createdb" ${VERB_PAR}
-            # shellcheck disable=SC2086
-            "${MMSEQS}" rmdb "${TMP_PATH}/splitdb" ${VERB_PAR}
-        fi
     ;;
     "FSA")
         # shellcheck disable=SC2086
