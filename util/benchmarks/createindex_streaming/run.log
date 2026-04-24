@@ -1,0 +1,67 @@
+Mode:         slow
+
+Working directory: /tmp/bench_createindex_stream_nkk87fmx
+Data cache:        /tmp/bench_createindex_stream_data
+
+========================================
+  Generating test data
+========================================
+      1M       1.0 MB  (cached)
+     10M      10.0 MB  (cached)
+     50M      50.0 MB  (cached)
+    100M     100.0 MB  (cached)
+    500M     500.0 MB  (cached)
+   1000M    1000.0 MB  (cached)
+   2000M    2000.0 MB  (cached)
+
+========================================
+  Correctness: streaming vs bulk-allocation SequenceLookup
+========================================
+
+      1M  PASS  (all 4 SequenceLookup entries match)
+     10M  PASS  (all 4 SequenceLookup entries match)
+     50M  PASS  (all 4 SequenceLookup entries match)
+
+  Result: ALL PASSED (12/12 comparisons)
+
+========================================
+  Performance: streaming vs bulk-allocation (threads=64)
+========================================
+
+--- Wall-time / CPU% ---
+
+  SIZE             STREAMING        BULK-ALLOC  TIME RATIO
+  --------  ----------------  ----------------  ----------
+  1M          0.073s 1516.5%    0.058s 1782.8%       1.25x
+  10M         0.144s 1117.6%    0.145s 1109.5%       1.00x
+  50M         0.278s 1524.0%    0.285s 1462.2%       0.98x
+  100M        0.435s 1880.9%    0.427s 1770.3%       1.02x
+  500M        1.908s 2084.3%    1.910s 2066.5%       1.00x
+  1000M       3.707s 2147.0%    3.668s 2137.3%       1.01x
+  2000M       7.302s 2179.2%    7.210s 2174.4%       1.01x
+
+--- Peak memory (system-level MemAvailable drop) ---
+
+  SIZE       STREAMING    BULK-ALLOC       RATIO
+  --------  ----------  ------------  ----------
+  1M            0.0 MB        0.0 MB         n/a
+  10M          17.2 MB       19.4 MB       0.88x
+  50M          45.3 MB       47.2 MB       0.96x
+  100M        132.2 MB      132.4 MB       1.00x
+  500M        501.2 MB      547.6 MB       0.92x
+  1000M       986.9 MB     1009.9 MB       0.98x
+  2000M      1023.1 MB       1.83 GB       0.54x
+
+--- Combined summary ---
+
+  SIZE      |   STREAMING (time / cpu / mem)  |    BULK-ALLOC (time / cpu / mem)  | TIME RATIO  |  MEM RATIO
+  --------  | ------------------------------  | --------------------------------  | ----------  | ----------
+  1M        |   0.073s 1516.5% /     0.0 MB  |   0.058s 1782.8% /       0.0 MB  |      1.25x  |        n/a
+  10M       |   0.144s 1117.6% /    17.2 MB  |   0.145s 1109.5% /      19.4 MB  |      1.00x  |      0.88x
+  50M       |   0.278s 1524.0% /    45.3 MB  |   0.285s 1462.2% /      47.2 MB  |      0.98x  |      0.96x
+  100M      |   0.435s 1880.9% /   132.2 MB  |   0.427s 1770.3% /     132.4 MB  |      1.02x  |      1.00x
+  500M      |   1.908s 2084.3% /   501.2 MB  |   1.910s 2066.5% /     547.6 MB  |      1.00x  |      0.92x
+  1000M     |   3.707s 2147.0% /   986.9 MB  |   3.668s 2137.3% /    1009.9 MB  |      1.01x  |      0.98x
+  2000M     |   7.302s 2179.2% /  1023.1 MB  |   7.210s 2174.4% /      1.83 GB  |      1.01x  |      0.54x
+
+Done.
