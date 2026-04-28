@@ -1,0 +1,164 @@
+#!/usr/bin/env python3
+"""
+Repro for ungappedprefilter crash with split query profiles against a
+pre-split (padded) target database.
+
+The crash occurs when:
+  1. Target DB is pre-split by makepaddedseqdb (sequences > 10000bp)
+  2. Query sequence is also > 10000bp, so blastdigp.sh splits the query
+     profile via splitsequence
+  3. ungappedprefilter segfaults on the split query profile + padded target
+
+Usage:
+    ./run                     # auto-detect mmseqs from build/src/mmseqs
+    ./run /path/to/mmseqs     # use a specific binary
+"""
+
+import os
+import random
+import shutil
+import subprocess
+import sys
+import tempfile
+
+
+def find_mmseqs(argv):
+    if len(argv) >= 2:
+        p = os.path.realpath(argv[1])
+        if os.path.isfile(p) and os.access(p, os.X_OK):
+            return p
+        sys.exit(f"Error: {argv[1]} is not an executable")
+
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    repo_root = os.path.normpath(os.path.join(script_dir, "../../.."))
+    default = os.path.join(repo_root, "build", "src", "mmseqs")
+    if os.path.isfile(default) and os.access(default, os.X_OK):
+        return default
+    sys.exit(
+        f"mmseqs not found at {default}\n"
+        "Build first (cd build && make -j) or pass the path: ./run /path/to/mmseqs"
+    )
+
+
+def generate_fasta(path, num_seqs=10, seq_len=15000, divergence=0.01, seed=42):
+    """Generate a FASTA with near-identical long sequences (>10000bp ensures splitting)."""
+    rng = random.Random(seed)
+    bases = "ACGT"
+
+    base_seq = "".join(rng.choice(bases) for _ in range(seq_len))
+
+    with open(path, "w") as f:
+        for i in range(num_seqs):
+            f.write(f">seq{i} length={seq_len}\n")
+            if i == 0:
+                seq = base_seq
+            else:
+                seq = list(base_seq)
+                for j in range(len(seq)):
+                    if rng.random() < divergence:
+                        seq[j] = rng.choice(bases.replace(seq[j], ""))
+                seq = "".join(seq)
+            for start in range(0, len(seq), 80):
+                f.write(seq[start:start + 80] + "\n")
+
+
+def run_cmd(args, **kwargs):
+    subprocess.run(
+        args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        check=True, **kwargs,
+    )
+
+
+def main():
+    mmseqs = find_mmseqs(sys.argv)
+    print(f"Using mmseqs: {mmseqs}")
+
+    tmpdir = tempfile.mkdtemp(prefix="prefilter_crash_")
+    try:
+        rc = _run(mmseqs, tmpdir)
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+    sys.exit(rc)
+
+
+def _run(mmseqs, tmpdir):
+    fasta = os.path.join(tmpdir, "input.fasta")
+    query_fasta = os.path.join(tmpdir, "query.fasta")
+    db = os.path.join(tmpdir, "db")
+    split_db = os.path.join(tmpdir, "split_db")
+    padded_db = os.path.join(tmpdir, "padded_db")
+    query_db = os.path.join(tmpdir, "query_db")
+    result_db = os.path.join(tmpdir, "result_db")
+    search_tmp = os.path.join(tmpdir, "tmp")
+    os.makedirs(search_tmp, exist_ok=True)
+
+    # 1. Generate synthetic FASTA: 10 seqs x 15000bp (> maxSeqLen 10000)
+    #    Both target and query are long, so query profile also gets split.
+    print("Generating synthetic FASTA...")
+    generate_fasta(fasta)
+
+    # 2. Extract first sequence as query (15000bp — will be split by search pipeline)
+    with open(fasta) as f:
+        lines = []
+        for line in f:
+            if line.startswith(">") and len(lines) > 0:
+                break
+            lines.append(line)
+    with open(query_fasta, "w") as f:
+        f.writelines(lines)
+
+    # 3. Build pre-split + indexed target DB (manual pipeline)
+    print("Building target DB (createdb -> splitsequence -> makepaddedseqdb -> createindex)...")
+    run_cmd([mmseqs, "createdb", fasta, db, "--threads", "1"])
+    run_cmd([mmseqs, "splitsequence", db, split_db,
+             "--sequence-overlap", "0", "--sequence-split-mode", "0",
+             "--headers-split-mode", "1", "--max-seq-len", "10000",
+             "--threads", "1"])
+    run_cmd([mmseqs, "makepaddedseqdb", split_db, padded_db, "--threads", "1"])
+    run_cmd([mmseqs, "createindex", padded_db, search_tmp, "--split", "1", "--threads", "1"])
+    shutil.rmtree(search_tmp)
+    os.makedirs(search_tmp, exist_ok=True)
+
+    # 4. Create query DB
+    print("Creating query DB...")
+    run_cmd([mmseqs, "createdb", query_fasta, query_db, "--threads", "1"])
+
+    # 5. Run iterative search (--num-iterations 2 triggers query profile splitting)
+    print("Running search (num-iterations=2, prefilter-mode=1, gpu=0)...")
+    proc = subprocess.run(
+        [mmseqs, "search", query_db, padded_db, result_db, search_tmp,
+         "--num-iterations", "2",
+         "-e", "0.1",
+         "--max-seqs", "300",
+         "--prefilter-mode", "1",
+         "--gpu", "0",
+         "--split", "1",
+         "--threads", "1"],
+        capture_output=True, text=True,
+    )
+
+    if proc.returncode != 0:
+        print(f"FAIL  (search crashed: exit code {proc.returncode})")
+        if proc.stderr:
+            for line in proc.stderr.strip().split("\n")[-20:]:
+                print(f"  {line}")
+        return 1
+
+    # 6. Verify the search actually found hits (query is seq0, target contains
+    #    seq0 itself plus 9 near-copies at ~1% divergence — must find hits)
+    result_m8 = os.path.join(tmpdir, "result.m8")
+    run_cmd([mmseqs, "convertalis", query_db, padded_db, result_db, result_m8,
+             "--threads", "1"])
+    with open(result_m8) as f:
+        hits = f.readlines()
+
+    if len(hits) == 0:
+        print("FAIL  (search produced no hits — split query was not matched)")
+        return 1
+
+    print(f"PASS  (search completed, {len(hits)} hits found)")
+    return 0
+
+
+if __name__ == "__main__":
+    main()
