@@ -98,7 +98,7 @@ void updateOffset(char* data, std::vector<Matcher::result_t> &results, const Orf
         res.queryOrfEndPos = -1;
         res.dbOrfStartPos = -1;
         res.dbOrfEndPos = -1;
-        if (targetNeedsUpdate == true || qloc == NULL) {
+        if (targetNeedsUpdate == true) {
             size_t targetId = tOrfDBr.sequenceReader->getId(res.dbKey);
             char *header = tOrfDBr.sequenceReader->getData(targetId, thread_idx);
 
@@ -219,6 +219,11 @@ int offsetalignment(int argc, const char **argv, const Command &command) {
     }
     // const bool targetNucl = Parameters::isEqualDbtype(targetDbType, Parameters::DBTYPE_NUCLEOTIDES);
     const bool targetNucl = true;
+    // When the original target DB and split target DB are the same path,
+    // the target was NOT split by the search pipeline (it was pre-split
+    // by makepaddedseqdb).  In this case, target coordinates are already
+    // relative to individual chunks and must NOT be adjusted.
+    const bool targetWasSplit = (par.db3.compare(par.db4) != 0);
     IndexReader *tSourceDbr = NULL;
     bool isSameSrcDB = (par.db3.compare(par.db1) == 0);
     bool isNuclNuclSearch = false;
@@ -399,9 +404,9 @@ int offsetalignment(int argc, const char **argv, const Command &command) {
                     char *header = qOrfDbr.sequenceReader->getData(queryId, thread_idx);
                     Orf::SequenceLocation qloc = Orf::parseOrfHeader(header);
                     if(qloc.id == UINT_MAX){
-                        updateOffset(data, results, NULL, *tOrfDbr, (isNuclNuclSearch||isTransNucTransNucSearch), isNuclNuclSearch, thread_idx);
+                        updateOffset(data, results, NULL, *tOrfDbr, (isNuclNuclSearch||isTransNucTransNucSearch) && targetWasSplit, isNuclNuclSearch, thread_idx);
                     }else{
-                        updateOffset(data, results, &qloc, *tOrfDbr, (isNuclNuclSearch||isTransNucTransNucSearch), isNuclNuclSearch, thread_idx);
+                        updateOffset(data, results, &qloc, *tOrfDbr, (isNuclNuclSearch||isTransNucTransNucSearch) && targetWasSplit, isNuclNuclSearch, thread_idx);
                     }
                     // do not merge entries
                     if(par.mergeQuery == false){
@@ -431,7 +436,7 @@ int offsetalignment(int argc, const char **argv, const Command &command) {
                     qLen = qSourceDbr->sequenceReader->getSeqLen(queryId);
                 }
                 char *data = alnDbr.getData(i, thread_idx);
-                updateOffset(data, results, NULL, *tOrfDbr, true, isNuclNuclSearch, thread_idx);
+                updateOffset(data, results, NULL, *tOrfDbr, targetWasSplit, isNuclNuclSearch, thread_idx);
             }
             if(par.mergeQuery == true){
                 updateLengths(results, qLen, tSourceDbr);
