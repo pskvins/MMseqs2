@@ -1,0 +1,531 @@
+#!/usr/bin/env python3
+"""
+Benchmark & correctness suite for streaming SequenceLookup in createindex.
+
+When --index-subset 2 is used (no k-mer index, only SequenceLookup), the new
+streaming path writes encoded+masked sequences directly to the .idx file without
+the O(totalSeqBytes) heap allocation.
+
+This script verifies that the streaming path produces byte-identical SequenceLookup
+data compared to the original bulk-allocation path, then measures wall-time and
+peak system memory (MemAvailable drop) at various input sizes.
+
+Usage:
+    cd util/benchmarks/createindexdb_faster
+    ./run                    # default: correctness + bench 1M..50M
+    ./run --fast             # quick smoke test: 1M only
+    ./run --slow             # full suite: 1M..2000M
+    ./run /path/to/mmseqs    # use a specific binary
+    ./run /path/to/mmseqs --fast
+    ./run /path/to/mmseqs --slow
+"""
+
+import os
+import shutil
+import subprocess
+import sys
+import tempfile
+
+# ── Configuration ─────────────────────────────────────────────────────────────
+
+CORRECTNESS_SIZES_FAST = ["1M"]
+CORRECTNESS_SIZES      = ["1M", "10M", "50M"]
+
+BENCH_SIZES_FAST = ["1M"]
+BENCH_SIZES      = ["1M", "10M", "50M", "100M", "500M"]
+BENCH_SIZES_SLOW = ["1M", "10M", "50M", "100M", "500M", "1000M", "2000M"]
+
+DATA_CACHE_DIR = "/tmp/bench_createindex_stream_data"
+
+# Keys in the .idx index file for the SequenceLookup data
+SEQLOOKUP_KEYS = {
+    13: "SEQCOUNT",
+    14: "SEQINDEXDATA",
+    15: "SEQINDEXDATASIZE",
+    16: "SEQINDEXSEQOFFSET",
+}
+
+# ── Helpers ───────────────────────────────────────────────────────────────────
+
+def parse_args(argv):
+    """Return (mmseqs_path, mode) where mode is 'fast', 'slow', or 'default'."""
+    flags = {"--fast", "--slow"}
+    mode = "default"
+    if "--fast" in argv[1:]:
+        mode = "fast"
+    elif "--slow" in argv[1:]:
+        mode = "slow"
+    rest = [a for a in argv[1:] if a not in flags]
+
+    if rest:
+        p = os.path.realpath(rest[0])
+        if os.path.isfile(p) and os.access(p, os.X_OK):
+            return p, mode
+        sys.exit(f"Error: {rest[0]} is not an executable")
+
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    repo_root = os.path.normpath(os.path.join(script_dir, "../../.."))
+    default = os.path.join(repo_root, "build", "src", "mmseqs")
+    if os.path.isfile(default) and os.access(default, os.X_OK):
+        return default, mode
+    sys.exit(
+        f"mmseqs not found at {default}\n"
+        "Build first (cd build && make -j) or pass the path: ./run /path/to/mmseqs"
+    )
+
+
+def run_cmd(args, **kwargs):
+    """Run a command silently, raising on failure."""
+    subprocess.run(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                   check=True, **kwargs)
+
+
+def read_meminfo():
+    """Read MemAvailable and SwapFree from /proc/meminfo (in kB)."""
+    mem_avail = 0
+    swap_free = 0
+    with open("/proc/meminfo") as f:
+        for line in f:
+            if line.startswith("MemAvailable:"):
+                mem_avail = int(line.split()[1])
+            elif line.startswith("SwapFree:"):
+                swap_free = int(line.split()[1])
+    return mem_avail, swap_free
+
+
+def measure(args):
+    """Run *args*; return (wall_seconds, peak_mem_kb, cpu_percent).
+
+    Uses fork/exec/wait4 to get rusage (user+sys CPU time), and polls
+    /proc/meminfo for system-level peak memory (MemAvailable drop).
+    """
+    import threading, time as _time
+
+    mem_avail_before, _ = read_meminfo()
+    min_avail = mem_avail_before
+    stop = threading.Event()
+
+    def poll():
+        nonlocal min_avail
+        while not stop.is_set():
+            try:
+                avail, _ = read_meminfo()
+                if avail < min_avail:
+                    min_avail = avail
+            except (FileNotFoundError, ValueError):
+                pass
+            stop.wait(0.1)
+
+    poller = threading.Thread(target=poll, daemon=True)
+    poller.start()
+
+    t0 = _time.monotonic()
+    pid = os.fork()
+    if pid == 0:
+        devnull = os.open(os.devnull, os.O_WRONLY)
+        os.dup2(devnull, 1)
+        os.dup2(devnull, 2)
+        os.close(devnull)
+        try:
+            os.execvp(args[0], args)
+        except OSError:
+            os._exit(127)
+    else:
+        _, status, rusage = os.wait4(pid, 0)
+        elapsed = _time.monotonic() - t0
+        exit_code = os.waitstatus_to_exitcode(status)
+        if exit_code != 0:
+            raise subprocess.CalledProcessError(exit_code, args)
+
+    stop.set()
+    poller.join()
+
+    cpu_s = rusage.ru_utime + rusage.ru_stime
+    cpu_pct = round(100 * cpu_s / elapsed, 1) if elapsed > 0 else 0
+
+    peak_mem_kb = mem_avail_before - min_avail
+    if peak_mem_kb < 0:
+        peak_mem_kb = 0
+    return elapsed, peak_mem_kb, cpu_pct
+
+
+def drop_page_cache_for_prefix(prefix):
+    """Advise kernel to drop page cache for all files matching prefix.
+
+    Uses posix_fadvise(FADV_DONTNEED) which works without root, unlike
+    /proc/sys/vm/drop_caches. This ensures that subsequent mmap reads
+    will fault pages in from disk, making MemAvailable drops visible.
+    """
+    d = os.path.dirname(prefix) or "."
+    base = os.path.basename(prefix)
+    if not os.path.isdir(d):
+        return
+    for name in os.listdir(d):
+        if name.startswith(base):
+            path = os.path.join(d, name)
+            if not os.path.isfile(path):
+                continue
+            try:
+                fd = os.open(path, os.O_RDONLY)
+                os.posix_fadvise(fd, 0, 0, os.POSIX_FADV_DONTNEED)
+                os.close(fd)
+            except (OSError, AttributeError):
+                pass
+
+
+def gen_fasta(gen_script, size, output):
+    """Generate a synthetic FASTA file, using a persistent cache."""
+    if os.path.isfile(output):
+        return
+    os.makedirs(os.path.dirname(output), exist_ok=True)
+    tmp = output + f".tmp.{os.getpid()}"
+    subprocess.run(
+        [sys.executable, gen_script, "--size", size, "-o", tmp],
+        check=True, stderr=subprocess.DEVNULL,
+    )
+    os.rename(tmp, output)
+
+
+def read_idx_index(path):
+    """Parse .idx.index file -> {key: (offset, length)}."""
+    entries = {}
+    with open(path) as f:
+        for line in f:
+            parts = line.strip().split('\t')
+            key, offset, length = int(parts[0]), int(parts[1]), int(parts[2])
+            entries[key] = (offset, length)
+    return entries
+
+
+def get_seqindexdatasize(idx_index, idx_data_path):
+    """Read the SEQINDEXDATASIZE value from the index."""
+    if 15 not in idx_index:
+        return None
+    off, length = idx_index[15]
+    with open(idx_data_path, 'rb') as f:
+        f.seek(off)
+        import struct
+        data = f.read(8)  # int64_t
+        return struct.unpack('<q', data)[0]
+
+
+def compare_seqlookup_entries(ref_idx_index, ref_idx_data, test_idx_index, test_idx_data):
+    """Compare SequenceLookup entries between ref and test.
+
+    Returns (n_match, n_total, mismatches).
+    For SEQINDEXDATA, only compare the meaningful bytes (seqindexDataSize),
+    not the sentinel/padding byte which may differ.
+    """
+    ref = read_idx_index(ref_idx_index)
+    test = read_idx_index(test_idx_index)
+
+    # Get the meaningful data size for SEQINDEXDATA comparison
+    ref_datasize = get_seqindexdatasize(ref, ref_idx_data)
+
+    n_match = 0
+    n_total = 0
+    mismatches = []
+
+    for key, name in sorted(SEQLOOKUP_KEYS.items()):
+        n_total += 1
+        if key not in ref:
+            mismatches.append(f"{name}: missing from ref")
+            continue
+        if key not in test:
+            mismatches.append(f"{name}: missing from test")
+            continue
+        roff, rlen = ref[key]
+        toff, tlen = test[key]
+
+        if key == 14:  # SEQINDEXDATA
+            # Compare only the meaningful bytes (seqindexDataSize),
+            # not the sentinel byte which is uninitialized in the original
+            cmp_len = ref_datasize if ref_datasize is not None else min(rlen, tlen)
+        else:
+            if rlen != tlen:
+                mismatches.append(f"{name}: length {rlen} vs {tlen}")
+                continue
+            cmp_len = rlen
+
+        with open(ref_idx_data, 'rb') as rf, open(test_idx_data, 'rb') as tf:
+            rf.seek(roff)
+            tf.seek(toff)
+            rdata = rf.read(cmp_len)
+            tdata = tf.read(cmp_len)
+            if rdata == tdata:
+                n_match += 1
+            else:
+                # Find first differing byte for diagnostic
+                for i in range(min(len(rdata), len(tdata))):
+                    if rdata[i] != tdata[i]:
+                        mismatches.append(
+                            f"{name}: content differs at byte {i} "
+                            f"(ref=0x{rdata[i]:02x}, test=0x{tdata[i]:02x}, "
+                            f"compared {cmp_len} bytes)")
+                        break
+                else:
+                    mismatches.append(f"{name}: length differs ({len(rdata)} vs {len(tdata)})")
+
+    return n_match, n_total, mismatches
+
+
+def remove_idx_files(db_prefix):
+    """Remove .idx, .idx.index, .idx.dbtype files for a DB."""
+    for ext in [".idx", ".idx.index", ".idx.dbtype"]:
+        p = db_prefix + ext
+        if os.path.exists(p):
+            os.remove(p)
+
+
+def fmt_mem(kb):
+    mb = kb / 1024
+    if mb >= 1024:
+        return f"{mb / 1024:.2f} GB"
+    return f"{mb:.1f} MB"
+
+
+# ── Main ──────────────────────────────────────────────────────────────────────
+
+def main():
+    mmseqs, mode = parse_args(sys.argv)
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    gen_script = os.path.join(script_dir, "gen_fasta.py")
+
+
+    if mode == "fast":
+        correctness_sizes = CORRECTNESS_SIZES_FAST
+        bench_sizes = BENCH_SIZES_FAST
+    elif mode == "slow":
+        correctness_sizes = CORRECTNESS_SIZES
+        bench_sizes = BENCH_SIZES_SLOW
+    else:
+        correctness_sizes = CORRECTNESS_SIZES
+        bench_sizes = BENCH_SIZES
+
+    print(f"Using mmseqs: {mmseqs}")
+    print(f"Mode:         {mode}")
+    print()
+
+    # Ephemeral directory for correctness/perf intermediates (cleaned up)
+    tmpdir = tempfile.mkdtemp(prefix="bench_createindex_stream_")
+    print(f"Working directory: {tmpdir}")
+    print(f"Data cache:        {DATA_CACHE_DIR}")
+    print()
+
+    try:
+        _run(mmseqs, gen_script, tmpdir, correctness_sizes, bench_sizes)
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+
+def _run(mmseqs, gen_script, tmpdir, correctness_sizes, bench_sizes):
+    all_sizes = sorted(set(correctness_sizes + bench_sizes),
+                       key=lambda s: _parse_size(s))
+
+    # ── Generate FASTA files + padded DBs ──────────────────────────────────
+    # Cached in DATA_CACHE_DIR so they survive across runs.
+    # We use GPU-padded DBs (makepaddedseqdb) for all tests because that's
+    # the real use case. With --index-subset 2:
+    #   Reference: original path (fillDatabase builds SequenceLookup in bulk)
+    #   Test:      streaming path (writes SequenceLookup directly to disk)
+    #
+    # The streaming path activates when needSequenceLookup=true && needKmerIndex=false,
+    # which is exactly --index-subset 2.
+
+    os.makedirs(DATA_CACHE_DIR, exist_ok=True)
+
+    print("========================================")
+    print("  Generating test data")
+    print("========================================")
+
+    fasta_paths = {}
+    paddb_paths = {}
+
+    for size in all_sizes:
+        fasta = os.path.join(DATA_CACHE_DIR, f"test_{size}.fasta")
+        fasta_cached = os.path.isfile(fasta)
+        gen_fasta(gen_script, size, fasta)
+        fasta_paths[size] = fasta
+        mb = os.path.getsize(fasta) / 1024**2
+
+        paddb = os.path.join(DATA_CACHE_DIR, f"paddb_{size}")
+        paddb_cached = os.path.isfile(paddb + ".dbtype")
+        if not paddb_cached:
+            run_cmd([mmseqs, "makepaddedseqdb", fasta, paddb,
+                     "--max-seq-len", "10000", "--threads", "1"])
+        paddb_paths[size] = paddb
+
+        tag = "cached" if (fasta_cached and paddb_cached) else "generated"
+        print(f"  {size:>6s}  {mb:8.1f} MB  ({tag})")
+    print()
+
+    # ── Correctness ───────────────────────────────────────────────────────
+    # Compare SequenceLookup entries between:
+    #   Reference: createindex --index-subset 18 (2|16: no k-mer index, bulk SequenceLookup via fillDatabase)
+    #   Test:      createindex --index-subset 2  (no k-mer index, streaming SequenceLookup)
+    #
+    # Both should produce identical SEQCOUNT, SEQINDEXDATASIZE, SEQINDEXSEQOFFSET,
+    # and SEQINDEXDATA (for the meaningful bytes).
+
+    print("========================================")
+    print("  Correctness: streaming vs bulk-allocation SequenceLookup")
+    print("========================================")
+    print()
+
+    total_checks = 0
+    total_pass = 0
+    all_correct = True
+
+    for size in correctness_sizes:
+        paddb = paddb_paths[size]
+        tmp1 = os.path.join(tmpdir, f"tmp_ref_{size}")
+        tmp2 = os.path.join(tmpdir, f"tmp_test_{size}")
+
+        # Reference: --index-subset 18 (2|16: bulk SequenceLookup, no streaming)
+        run_cmd([mmseqs, "createindex", paddb, tmp1,
+                 "--threads", "1", "--index-subset", "18", "--split", "1"])
+        ref_idx = paddb + ".idx"
+        ref_idx_index = ref_idx + ".index"
+        ref_data_copy = os.path.join(tmpdir, f"ref_{size}.idx")
+        ref_index_copy = os.path.join(tmpdir, f"ref_{size}.idx.index")
+        shutil.copy2(ref_idx, ref_data_copy)
+        shutil.copy2(ref_idx_index, ref_index_copy)
+
+        # Remove index so createindex will recreate
+        remove_idx_files(paddb)
+
+        # Test: --index-subset 2 (no k-mer index, streaming SequenceLookup)
+        run_cmd([mmseqs, "createindex", paddb, tmp2,
+                 "--threads", "1", "--index-subset", "2", "--split", "1"])
+        test_idx = paddb + ".idx"
+        test_idx_index = test_idx + ".index"
+
+        n_match, n_total, mismatch_list = compare_seqlookup_entries(
+            ref_index_copy, ref_data_copy,
+            test_idx_index, test_idx)
+
+        total_checks += n_total
+        total_pass += n_match
+        size_ok = n_match == n_total
+
+        if not size_ok:
+            all_correct = False
+        status = "PASS" if size_ok else "FAIL"
+        detail = (f"all {n_total} SequenceLookup entries match"
+                  if size_ok
+                  else f"mismatches: {', '.join(mismatch_list)}")
+        print(f"  {size:>6s}  {status}  ({detail})")
+
+        # Clean up
+        remove_idx_files(paddb)
+        for p in [ref_data_copy, ref_index_copy]:
+            if os.path.exists(p):
+                os.remove(p)
+
+    print()
+    if all_correct:
+        print(f"  Result: ALL PASSED ({total_pass}/{total_checks} comparisons)")
+    else:
+        print(f"  Result: FAILURES detected ({total_pass}/{total_checks} passed)")
+        print()
+        print("  Aborting -- correctness must pass before benchmarking.")
+        sys.exit(1)
+    print()
+
+    # ── Performance benchmarks ────────────────────────────────────────────
+    # Measure createindex on GPU-padded DBs:
+    #   Streaming:  --index-subset 2  (new streaming path, no bulk allocation)
+    #   Bulk alloc: --index-subset 18 (2|16: bulk SequenceLookup via fillDatabase)
+    #
+    # Both use --split 1 and all available threads.
+
+    threads = str(os.cpu_count())
+
+    print("========================================")
+    print(f"  Performance: streaming vs bulk-allocation (threads={threads})")
+    print("========================================")
+    print()
+
+    rows = []  # (size, stream_time, stream_mem, stream_cpu, bulk_time, bulk_mem, bulk_cpu)
+
+    for size in bench_sizes:
+        paddb = paddb_paths[size]
+        perf_tmp = os.path.join(tmpdir, f"perf_tmp_{size}")
+        os.makedirs(perf_tmp, exist_ok=True)
+
+        # Drop page cache so mmap faults show up in MemAvailable delta
+        drop_page_cache_for_prefix(paddb)
+
+        # Streaming path (--index-subset 2)
+        st, sm, sc = measure([mmseqs, "createindex", paddb, perf_tmp,
+                              "--threads", threads, "--index-subset", "2", "--split", "1"])
+        remove_idx_files(paddb)
+
+        # Drop page cache again for fair comparison
+        drop_page_cache_for_prefix(paddb)
+
+        # Bulk allocation path (--index-subset 18: 2|16, no streaming)
+        bt, bm, bc = measure([mmseqs, "createindex", paddb, perf_tmp,
+                              "--threads", threads, "--index-subset", "18", "--split", "1"])
+        remove_idx_files(paddb)
+
+        rows.append((size, st, sm, sc, bt, bm, bc))
+
+    # ── Wall-time + CPU% table ────────────────────────────────────────────
+    print("--- Wall-time / CPU% ---")
+    print()
+    print(f"  {'SIZE':8s}  {'STREAMING':>16s}  {'BULK-ALLOC':>16s}  {'TIME RATIO':>10s}")
+    print(f"  {'--------':8s}  {'----------------':>16s}  {'----------------':>16s}  {'----------':>10s}")
+    for size, st, sm, sc, bt, bm, bc in rows:
+        ratio = f"{st / bt:.2f}x" if bt > 0 else "n/a"
+        print(f"  {size:8s}  {st:7.3f}s {sc:6.1f}%  {bt:7.3f}s {bc:6.1f}%  {ratio:>10s}")
+    print()
+
+    # ── Peak memory table ─────────────────────────────────────────────────
+    print("--- Peak memory (system-level MemAvailable drop) ---")
+    print()
+    print(f"  {'SIZE':8s}  {'STREAMING':>10s}  {'BULK-ALLOC':>12s}  {'RATIO':>10s}")
+    print(f"  {'--------':8s}  {'----------':>10s}  {'------------':>12s}  {'----------':>10s}")
+    for size, st, sm, sc, bt, bm, bc in rows:
+        ratio = f"{sm / bm:.2f}x" if bm > 0 else "n/a"
+        s_str = fmt_mem(sm)
+        b_str = fmt_mem(bm)
+        print(f"  {size:8s}  {s_str:>10s}  {b_str:>12s}  {ratio:>10s}")
+    print()
+
+    # ── Combined summary ──────────────────────────────────────────────────
+    print("--- Combined summary ---")
+    print()
+    hdr = (f"  {'SIZE':8s}  | {'STREAMING (time / cpu / mem)':>30s}"
+           f"  | {'BULK-ALLOC (time / cpu / mem)':>32s}"
+           f"  | {'TIME RATIO':>10s}  | {'MEM RATIO':>10s}")
+    sep = (f"  {'--------':8s}  | {'------------------------------':>30s}"
+           f"  | {'--------------------------------':>32s}"
+           f"  | {'----------':>10s}  | {'----------':>10s}")
+    print(hdr)
+    print(sep)
+    for size, st, sm, sc, bt, bm, bc in rows:
+        t_ratio = f"{st / bt:.2f}x" if bt > 0 else "n/a"
+        m_ratio = f"{sm / bm:.2f}x" if bm > 0 else "n/a"
+        s_str = fmt_mem(sm)
+        b_str = fmt_mem(bm)
+        print(f"  {size:8s}  | {st:7.3f}s {sc:6.1f}% / {s_str:>10s}"
+              f"  | {bt:7.3f}s {bc:6.1f}% / {b_str:>12s}"
+              f"  | {t_ratio:>10s}  | {m_ratio:>10s}")
+    print()
+    print("Done.")
+
+
+# ── Utilities ─────────────────────────────────────────────────────────────────
+
+def _parse_size(s):
+    """'10M' -> 10_485_760 (for sorting only)."""
+    s = s.strip().upper()
+    m = {'B': 1, 'K': 1024, 'M': 1024**2, 'G': 1024**3, 'T': 1024**4}
+    if s[-1] in m:
+        return int(float(s[:-1]) * m[s[-1]])
+    return int(s)
+
+
+if __name__ == "__main__":
+    main()

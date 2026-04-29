@@ -299,6 +299,14 @@ case "${SELECTION}" in
         push_back "${TMP_PATH}/kalamari.fasta"
         INPUT_TYPE="FASTA_LIST"
     ;;
+    *)
+        if [ ! -f "${SELECTION}" ]; then
+            fail "Local file not found: ${SELECTION}"
+        fi
+        push_back "${SELECTION}"
+        date "+%s" > "${TMP_PATH}/version"
+        INPUT_TYPE="LOCAL_FASTA"
+    ;;
 esac
 
 if notExists "${OUTDB}.dbtype"; then
@@ -311,6 +319,23 @@ case "${INPUT_TYPE}" in
         for i in "${@}"; do
             rm -f -- "$i"
         done
+    ;;
+    "LOCAL_FASTA")
+        eval "set -- $ARR"
+        # Fused pipeline: makepaddedseqdb reads FASTA directly (createdb +
+        # splitsequence + padding in a single streaming pass), then
+        # createindex --index-subset 2 streams SequenceLookup with constant
+        # memory via MADV_DONTNEED.
+        # shellcheck disable=SC2086
+        "${MMSEQS}" makepaddedseqdb "${@}" "${OUTDB}" \
+            --headers-split-mode 1 ${THREADS_PAR} \
+            || fail "makepaddedseqdb died"
+        mkdir -p "${TMP_PATH}/indexdb"
+        # shellcheck disable=SC2086
+        "${MMSEQS}" createindex "${OUTDB}" "${TMP_PATH}/indexdb" \
+            --split 1 --index-subset 2 ${THREADS_PAR} \
+            || fail "createindex died"
+        rm -rf -- "${TMP_PATH}/indexdb"
     ;;
     "FSA")
         # shellcheck disable=SC2086

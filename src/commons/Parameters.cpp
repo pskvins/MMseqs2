@@ -974,6 +974,11 @@ Parameters::Parameters():
     makepaddedseqdb.push_back(&PARAM_MASK_PROBABILTY);
     makepaddedseqdb.push_back(&PARAM_MASK_LOWER_CASE);
     makepaddedseqdb.push_back(&PARAM_MASK_N_REPEAT);
+    makepaddedseqdb.push_back(&PARAM_MAX_SEQ_LEN);
+    makepaddedseqdb.push_back(&PARAM_SEQUENCE_OVERLAP);
+    makepaddedseqdb.push_back(&PARAM_HEADER_SPLIT_MODE);
+    makepaddedseqdb.push_back(&PARAM_DB_TYPE);
+    makepaddedseqdb.push_back(&PARAM_SHUFFLE);
     makepaddedseqdb.push_back(&PARAM_WRITE_LOOKUP);
     makepaddedseqdb.push_back(&PARAM_THREADS);
     makepaddedseqdb.push_back(&PARAM_V);

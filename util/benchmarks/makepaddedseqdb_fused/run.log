@@ -1,0 +1,97 @@
+Working directory: /tmp/bench_fused_6fj_g1fs
+
+========================================
+  Generating test FASTA files
+========================================
+  Cache: /tmp/bench_fused_fasta_cache
+      1M       1.0 MB  (cached)
+     10M      10.0 MB  (cached)
+     50M      50.0 MB  (cached)
+    100M     100.0 MB  (cached)
+    500M     500.0 MB  (cached)
+
+========================================
+  Correctness: fused vs 3-step reference
+========================================
+
+  Configs: 6
+    overlap=0,hdr=0
+    overlap=300,hdr=0
+    overlap=100,hdr=0
+    overlap=0,hdr=1
+    overlap=300,hdr=1
+    overlap=100,hdr=1
+
+  --- overlap=0,hdr=0 ---
+        1M  PASS  (all 6 files match)
+       10M  PASS  (all 6 files match)
+       50M  PASS  (all 6 files match)
+      100M  PASS  (all 6 files match)
+
+  --- overlap=300,hdr=0 ---
+        1M  PASS  (all 6 files match)
+       10M  PASS  (all 6 files match)
+       50M  PASS  (all 6 files match)
+      100M  PASS  (all 6 files match)
+
+  --- overlap=100,hdr=0 ---
+        1M  PASS  (all 6 files match)
+       10M  PASS  (all 6 files match)
+       50M  PASS  (all 6 files match)
+      100M  PASS  (all 6 files match)
+
+  --- overlap=0,hdr=1 ---
+        1M  PASS  (all 6 files match)
+       10M  PASS  (all 6 files match)
+       50M  PASS  (all 6 files match)
+      100M  PASS  (all 6 files match)
+
+  --- overlap=300,hdr=1 ---
+        1M  PASS  (all 6 files match)
+       10M  PASS  (all 6 files match)
+       50M  PASS  (all 6 files match)
+      100M  PASS  (all 6 files match)
+
+  --- overlap=100,hdr=1 ---
+        1M  PASS  (all 6 files match)
+       10M  PASS  (all 6 files match)
+       50M  PASS  (all 6 files match)
+      100M  PASS  (all 6 files match)
+
+  Result: ALL PASSED (144/144 file comparisons)
+
+========================================
+  Performance: fused vs reference (threads=64)
+========================================
+
+--- Wall-time / CPU% ---
+
+  SIZE                 FUSED           REF(DB)  TIME RATIO
+  --------  ----------------  ----------------  ----------
+  1M          0.025s 2495.1%    0.119s  550.0%       0.21x
+  10M         0.047s 1473.6%    0.160s  506.3%       0.29x
+  50M         0.081s 1503.4%    0.188s  630.5%       0.43x
+  100M        0.112s 1887.2%    0.248s  693.7%       0.45x
+  500M        0.468s 2434.4%    0.649s  850.0%       0.72x
+
+--- Peak RSS ---
+
+  SIZE           FUSED     REF(DB)       RATIO
+  --------  ----------  ----------  ----------
+  1M           11.6 MB     11.6 MB       1.00x
+  10M          18.0 MB     11.6 MB       1.55x
+  50M          55.5 MB     74.0 MB       0.75x
+  100M        103.0 MB    201.5 MB       0.51x
+  500M        498.1 MB    973.5 MB       0.51x
+
+--- Combined summary ---
+
+  SIZE      |     FUSED (time / cpu / RSS)  |       REF (time / cpu / RSS)  | TIME RATIO  |  RSS RATIO
+  --------  | ----------------------------  | ----------------------------  | ----------  | ----------
+  1M        |   0.025s 2495.1% /  11.6 MB  |   0.119s 550.0% /  11.6 MB  |      0.21x  |      1.00x
+  10M       |   0.047s 1473.6% /  18.0 MB  |   0.160s 506.3% /  11.6 MB  |      0.29x  |      1.55x
+  50M       |   0.081s 1503.4% /  55.5 MB  |   0.188s 630.5% /  74.0 MB  |      0.43x  |      0.75x
+  100M      |   0.112s 1887.2% / 103.0 MB  |   0.248s 693.7% / 201.5 MB  |      0.45x  |      0.51x
+  500M      |   0.468s 2434.4% / 498.1 MB  |   0.649s 850.0% / 973.5 MB  |      0.72x  |      0.51x
+
+Done.

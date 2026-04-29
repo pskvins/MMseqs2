@@ -129,9 +129,13 @@ std::vector<Command> baseCommands = {
                                    {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }}},
         {"databases",            databases,            &par.databases,            COMMAND_DATABASE_CREATION,
                 "List and download databases",
-                NULL,
+                "# Download a known database\n"
+                "mmseqs databases UniRef30_2302 db tmp\n\n"
+                "# Index a local FASTA file (use ./relative or /absolute paths)\n"
+                "mmseqs databases ./input.fasta.gz db tmp\n"
+                "mmseqs databases /data/rnacentral_active.fasta.gz db tmp\n\n",
                 "Milot Mirdita <milot@mirdita.de>",
-                "<name> <o:sequenceDB> <tmpDir>",
+                "<name|path> <o:sequenceDB> <tmpDir>",
                 CITATION_TAXONOMY|CITATION_MMSEQS2, {{"selection", 0, DbType::ZERO_OR_ALL, &DbValidator::empty },
                                                            {"sequenceDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
                                                            {"tmpDir",     DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }}},
@@ -149,10 +153,13 @@ std::vector<Command> baseCommands = {
                                                            {"sequenceDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile }}},
         {"makepaddedseqdb",               makepaddedseqdb,              &par.makepaddedseqdb,              COMMAND_HIDDEN,
                 "Generate a padded sequence DB",
-                "Generate a padded sequence DB",
+                "# From existing sequence DB\n"
+                "mmseqs makepaddedseqdb sequenceDB paddedDB\n\n"
+                "# Directly from FASTA (fused createdb+splitsequence+makepaddedseqdb)\n"
+                "mmseqs makepaddedseqdb input.fasta paddedDB --max-seq-len 10000\n",
                 "Milot Mirdita <milot@mirdita.de> & Martin Steinegger <martin.steinegger@snu.ac.kr>",
-                "<i:sequenceDB> <o:sequenceDB>",
-                CITATION_GPU, {{"sequenceDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA|DbType::NEED_HEADER, &DbValidator::sequenceDb },
+                "<i:fastaFile|sequenceDB> <o:sequenceDB>",
+                CITATION_GPU, {{"sequenceDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::allDbAndFlat },
                                           {"sequenceIndexDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::sequenceDb }}},
         {"appenddbtoindex",      appenddbtoindex,      &par.appenddbtoindex,      COMMAND_HIDDEN,
                 NULL,
