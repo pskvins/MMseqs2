@@ -7,6 +7,7 @@
 #include "itoa.h"
 
 #include "Orf.h"
+#include "Sequence.h"
 
 #include <unistd.h>
 #include <climits>
@@ -27,6 +28,11 @@ int splitsequence(int argc, const char **argv, const Command& command) {
     }
     DBReader<unsigned int> reader(par.db1.c_str(), par.db1Index.c_str(), par.threads, mode);
     reader.open(DBReader<unsigned int>::NOSORT);
+    const bool isProfile = Parameters::isEqualDbtype(reader.getDbtype(), Parameters::DBTYPE_HMM_PROFILE);
+    // For profile DBs, each position takes PROFILE_READIN_SIZE bytes in the data file.
+    // Soft-link mode writes raw byte offsets/lengths into the index, so we must
+    // convert position-based startPos/len to byte units.
+    const size_t bytesPerPos = isProfile ? Sequence::PROFILE_READIN_SIZE : 1;
     bool sizeLarger = false;
     for (size_t i = 0; i < reader.getSize(); i++) {
         sizeLarger |= (reader.getSeqLen(i) > par.maxSeqLen);
@@ -98,8 +104,12 @@ int splitsequence(int argc, const char **argv, const Command& command) {
                 size_t len = std::min(par.maxSeqLen, seqLen - (split * par.maxSeqLen - split*sequenceOverlap));
                 size_t startPos = split * par.maxSeqLen - split*sequenceOverlap;
                 if (par.sequenceSplitMode == Parameters::SEQUENCE_SPLIT_MODE_SOFT) {
-                    // +2 to emulate the \n\0
-                    sequenceWriter.writeIndexEntry(key, reader.getOffset(i) + startPos, len+2, thread_idx);
+                    // Convert position-based offset/length to byte-based for the index.
+                    // For sequence DBs bytesPerPos==1; for profile DBs bytesPerPos==PROFILE_READIN_SIZE.
+                    // +1 for null terminator (profiles) or +2 for \n\0 (sequences).
+                    size_t byteOffset = reader.getOffset(i) + startPos * bytesPerPos;
+                    size_t byteLen = len * bytesPerPos + (isProfile ? 1 : 2);
+                    sequenceWriter.writeIndexEntry(key, byteOffset, byteLen, thread_idx);
                 } else {
                     sequenceWriter.writeStart(thread_idx);
                     sequenceWriter.writeAdd(data + startPos, len, thread_idx);
